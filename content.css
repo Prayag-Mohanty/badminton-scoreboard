@@ -1,0 +1,95 @@
+/* Badminton Scoreboard for YouTube. Everything is prefixed bsb- to stay out of YouTube's way. */
+#bsb-panel {
+  --bsb-bg: var(--yt-spec-base-background, #fff);
+  --bsb-raised: var(--yt-spec-badge-chip-background, rgba(0, 0, 0, 0.05));
+  --bsb-text: var(--yt-spec-text-primary, #0f0f0f);
+  --bsb-muted: var(--yt-spec-text-secondary, #606060);
+  --bsb-line: var(--yt-spec-10-percent-layer, rgba(0, 0, 0, 0.1));
+  --bsb-side0: #1f6feb;
+  --bsb-side1: #d6336c;
+  position: relative;
+  box-sizing: border-box;
+  margin: 0 0 16px;
+  padding: 12px;
+  border: 1px solid var(--bsb-line);
+  border-radius: 12px;
+  background: var(--bsb-bg);
+  color: var(--bsb-text);
+  font: 14px/1.4 Roboto, Arial, sans-serif;
+}
+#bsb-panel.bsb-floating { position: fixed; right: 16px; top: 72px; width: 400px; z-index: 2100; max-height: calc(100vh - 90px); overflow: auto; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25); }
+#bsb-panel * { box-sizing: border-box; }
+#bsb-panel [hidden] { display: none !important; }
+#bsb-panel button { font: inherit; color: inherit; cursor: pointer; }
+#bsb-panel kbd { font: 600 11px/1 ui-monospace, monospace; padding: 2px 5px; border-radius: 4px; background: rgba(255, 255, 255, 0.25); margin-right: 6px; }
+
+.bsb-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.bsb-title { font-weight: 600; font-size: 15px; }
+.bsb-head-btns { display: flex; gap: 2px; }
+.bsb-head-btns button { border: 0; background: transparent; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; }
+.bsb-head-btns button:hover { background: var(--bsb-raised); }
+
+.bsb-board { display: block; width: 100%; border-radius: 8px; background: #2c3e30; }
+.bsb-ad { margin-top: 6px; padding: 6px 8px; border-radius: 8px; background: #fff3cd; color: #664d03; font-size: 12px; }
+
+.bsb-toggles { display: flex; gap: 16px; flex-wrap: wrap; margin: 10px 0 4px; }
+.bsb-toggles label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+.bsb-points { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; margin-top: 8px; }
+.bsb-pt { border: 0; border-radius: 10px; padding: 12px 8px; color: #fff !important; font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; min-width: 0; }
+.bsb-pt .bsb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bsb-pt.bsb-side0 { background: var(--bsb-side0); }
+.bsb-pt.bsb-side1 { background: var(--bsb-side1); }
+.bsb-pt:active { filter: brightness(1.2); }
+.bsb-pt:disabled { opacity: 0.5; cursor: not-allowed; }
+.bsb-undo { border: 1px solid var(--bsb-line); background: var(--bsb-raised); border-radius: 10px; padding: 0 10px; }
+.bsb-undo kbd { background: var(--bsb-line); }
+.bsb-hint { font-size: 12px; color: var(--bsb-muted); margin: 6px 0 8px; text-align: center; }
+
+.bsb-rallies-head { font-weight: 600; font-size: 13px; color: var(--bsb-muted); border-bottom: 1px solid var(--bsb-line); padding-bottom: 4px; }
+.bsb-count { display: inline-block; padding: 0 6px; border-radius: 8px; background: var(--bsb-raised); }
+.bsb-rallies { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; }
+.bsb-rallies li { display: grid; grid-template-columns: 44px 1fr auto 44px 26px; gap: 6px; align-items: center; padding: 4px 2px; border-bottom: 1px solid var(--bsb-line); font-size: 13px; cursor: pointer; }
+.bsb-rallies li:hover { background: var(--bsb-raised); }
+.bsb-rallies li.bsb-current { background: rgba(255, 204, 0, 0.22); }
+.bsb-rallies li.bsb-ignored { opacity: 0.45; }
+.bsb-rallies button { border: 0; background: transparent; color: var(--bsb-muted); border-radius: 6px; }
+.bsb-rallies button:hover { background: var(--bsb-line); }
+.bsb-t { font-variant-numeric: tabular-nums; color: var(--bsb-muted); }
+.bsb-who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.bsb-who.bsb-side0 { color: var(--bsb-side0); }
+.bsb-who.bsb-side1 { color: var(--bsb-side1); }
+.bsb-tag { font-size: 11px; font-weight: 700; color: #b58100; }
+
+.bsb-setup, .bsb-menu { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--bsb-line); }
+.bsb-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bsb-field { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; font-size: 12px; color: var(--bsb-muted); min-width: 0; }
+#bsb-panel input:not([type]), #bsb-panel input[name], #bsb-panel select {
+  font: inherit; font-size: 13px; color: var(--bsb-text); background: var(--bsb-raised); border: 1px solid var(--bsb-line); border-radius: 6px; padding: 5px 7px; width: 100%;
+}
+#bsb-panel input[type="range"] { padding: 0; }
+#bsb-panel input[type="checkbox"] { width: auto; }
+.bsb-team { border: 1px solid var(--bsb-line); border-radius: 8px; padding: 6px; margin: 0 0 8px; display: grid; gap: 5px; min-width: 0; }
+.bsb-team legend { font-size: 12px; font-weight: 600; padding: 0 4px; }
+.bsb-team:first-child legend { color: var(--bsb-side0); }
+.bsb-team:last-child legend { color: var(--bsb-side1); }
+.bsb-row { display: flex; justify-content: flex-end; }
+.bsb-primary { border: 0; background: #065fd4; color: #fff !important; border-radius: 18px; padding: 7px 16px; font-weight: 600; }
+
+.bsb-menu button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px; border-radius: 8px; }
+.bsb-menu button:hover { background: var(--bsb-raised); }
+.bsb-menu .bsb-danger { color: #c62828 !important; }
+.bsb-note { font-size: 12px; color: var(--bsb-muted); margin: 6px 8px 0; }
+
+.bsb-flash, .bsb-video-flash {
+  position: absolute; left: 50%; transform: translateX(-50%); padding: 6px 14px; border-radius: 16px;
+  background: rgba(0, 0, 0, 0.8); color: #fff; font: 600 14px Roboto, Arial, sans-serif; white-space: nowrap;
+  opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 5;
+}
+.bsb-flash { bottom: 12px; }
+.bsb-video-flash { bottom: 70px; z-index: 60; font-size: 16px; }
+.bsb-show { opacity: 1; }
+
+/* On the video: above the picture, below YouTube's controls. */
+.bsb-video-board { position: absolute; pointer-events: none; z-index: 20; }
+.ytp-autohide .bsb-video-flash { bottom: 24px; }
