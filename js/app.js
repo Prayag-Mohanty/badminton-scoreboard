@@ -193,12 +193,15 @@
     }
     if (e && ['pointsToWin', 'winBy', 'cap'].includes(e.target.name)) setRadio('preset', 'custom');
 
+    // There's no mixed singles: picking Mixed makes it doubles, picking Singles drops Mixed.
+    const mixedOn = form.querySelector('input[name="category"][value="X"]').checked;
+    if (mixedOn && new FormData(form).get('format') === 'singles') {
+      if (e && e.target.name === 'format') setRadio('category', 'M');
+      else setRadio('format', 'doubles');
+    }
     const format = new FormData(form).get('format');
     $$('[data-min="doubles"]').forEach((el) => (el.hidden = format === 'singles'));
     $$('[data-min="3v3"]').forEach((el) => (el.hidden = format !== '3v3'));
-    const mixed = form.querySelector('[data-only="team"]');
-    mixed.hidden = format === 'singles';
-    if (format === 'singles' && form.querySelector('input[name="category"][value="X"]').checked) setRadio('category', 'M');
     $$('[name="p0_0"], [name="p1_0"]').forEach((el) => (el.placeholder = format === 'singles' ? 'Player name' : 'Player 1'));
 
     const { config, look } = readForm();
