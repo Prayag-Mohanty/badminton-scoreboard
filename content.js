@@ -238,7 +238,7 @@
     const f = h('form', { class: 'bsb-setup', hidden: true, onsubmit: (e) => e.preventDefault() });
     const inputs = {
       format: select('format', [['singles', 'Singles'], ['doubles', 'Doubles'], ['3v3', '3 vs 3']]),
-      category: select('category', [['M', "Men's"], ['W', "Women's"], ['X', 'Mixed'], ['O', "Don't show"]]),
+      category: select('category', [['M', "Men's"], ['W', "Women's"], ['X', 'Mixed doubles'], ['O', "Don't show"]]),
       preset: select('preset', [['21', '21 points (cap 30)'], ['15', '15 points (cap 21)'], ['11', '11 points (cap 15)'], ['nodeuce', '21 points, no deuce']]),
       bestOf: select('bestOf', [['1', '1 game'], ['3', 'Best of 3'], ['5', 'Best of 5']]),
       firstServer: select('firstServer', [['0', 'Side 1'], ['1', 'Side 2']]),
@@ -270,7 +270,12 @@
       h('div', { class: 'bsb-row' }, [h('button', { type: 'button', class: 'bsb-primary', text: 'Done', onclick: () => togglePane(null) })])
     );
 
-    const read = () => {
+    const read = (e) => {
+      // There's no mixed singles: picking Mixed makes it doubles, picking Singles drops Mixed.
+      if (inputs.category.value === 'X' && inputs.format.value === 'singles') {
+        if (e && e.target === inputs.format) inputs.category.value = 'M';
+        else inputs.format.value = 'doubles';
+      }
       const fd = new FormData(f);
       const format = fd.get('format');
       const count = format === 'singles' ? 1 : format === 'doubles' ? 2 : 3;
@@ -279,7 +284,7 @@
       const ss = String(fd.get('startScore') || '').match(/(\d+)\s*[-–: ]\s*(\d+)/);
       Object.assign(st.project.config, rules, {
         format,
-        category: format === 'singles' && fd.get('category') === 'X' ? 'M' : fd.get('category'),
+        category: fd.get('category'),
         preset: preset === 'nodeuce' ? 'custom' : preset,
         bestOf: parseInt(fd.get('bestOf'), 10),
         firstServer: parseInt(fd.get('firstServer'), 10),
@@ -292,7 +297,6 @@
       });
       Object.assign(st.project.look, { theme: fd.get('theme'), scale: parseFloat(fd.get('scale')) || 1 });
       for (const side of [0, 1]) players[side].forEach((el, i) => (el.hidden = i >= count));
-      inputs.category.querySelector('option[value="X"]').hidden = format === 'singles';
       refreshLabels();
       rebuild();
     };
@@ -320,7 +324,6 @@
           el.hidden = i >= count;
         });
       }
-      inputs.category.querySelector('option[value="X"]').hidden = c.format === 'singles';
     };
     return { el: f, write, firstServer: inputs.firstServer, startNear: inputs.startNear };
   }
