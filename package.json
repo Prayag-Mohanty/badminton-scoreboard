@@ -1,0 +1,11 @@
+{
+  "name": "badminton-scoreboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Add a BWF-style live scoreboard to badminton match videos, entirely in the browser.",
+  "scripts": {
+    "start": "npx http-server -p 8080 -c-1 .",
+    "test": "node --test test/*.test.js"
+  },
+  "license": "MIT"
+}

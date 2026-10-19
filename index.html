@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Badminton Scoreboard</title>
+  <meta name="description" content="Add a BWF-style live scoreboard to your badminton match videos. Runs entirely in your browser — your video is never uploaded." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo" aria-hidden="true">🏸</span> Badminton Scoreboard</div>
+    <nav class="steps" aria-label="Progress">
+      <span class="step" data-step="setup">1. Setup</span>
+      <span class="step" data-step="score">2. Score the match</span>
+      <span class="step" data-step="export">3. Export</span>
+    </nav>
+  </header>
+
+  <!-- ============ STEP 1: SETUP ============ -->
+  <main id="screen-setup" class="screen">
+    <section class="card">
+      <h2>Your match video</h2>
+      <label id="dropzone" class="dropzone">
+        <input id="file-input" type="file" accept="video/*,.mp4,.mov,.m4v" hidden />
+        <div class="dz-empty">
+          <strong>Choose or drop your match video</strong>
+          <span>MP4 / MOV from your phone. Large files (1–2 GB) are fine: the video stays on your device and is never uploaded.</span>
+        </div>
+        <div class="dz-file" hidden>
+          <strong id="file-name"></strong>
+          <span id="file-meta"></span>
+        </div>
+      </label>
+      <div id="resume-box" class="notice" hidden></div>
+      <p class="muted small">Have a saved project? <label class="link">Load project file<input id="project-input" type="file" accept=".json,application/json" hidden /></label></p>
+    </section>
+
+    <form id="setup-form" class="card" autocomplete="off">
+      <h2>About the match</h2>
+
+      <div class="field">
+        <span class="label">Match type</span>
+        <div class="seg" role="radiogroup">
+          <label><input type="radio" name="format" value="singles" checked /><span>Singles</span></label>
+          <label><input type="radio" name="format" value="doubles" /><span>Doubles</span></label>
+          <label><input type="radio" name="format" value="3v3" /><span>3 vs 3</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="label">Category</span>
+        <div class="seg" role="radiogroup">
+          <label><input type="radio" name="category" value="M" checked /><span>Men's</span></label>
+          <label><input type="radio" name="category" value="W" /><span>Women's</span></label>
+          <label data-only="team"><input type="radio" name="category" value="X" /><span>Mixed</span></label>
+          <label><input type="radio" name="category" value="O" /><span>Don't show</span></label>
+        </div>
+      </div>
+
+      <div class="teams">
+        <fieldset class="team" data-side="0">
+          <legend>Side 1</legend>
+          <input name="p0_0" placeholder="Player name" maxlength="40" />
+          <input name="p0_1" placeholder="Partner" maxlength="40" data-min="doubles" />
+          <input name="p0_2" placeholder="Third player" maxlength="40" data-min="3v3" />
+        </fieldset>
+        <div class="vs">vs</div>
+        <fieldset class="team" data-side="1">
+          <legend>Side 2</legend>
+          <input name="p1_0" placeholder="Player name" maxlength="40" />
+          <input name="p1_1" placeholder="Partner" maxlength="40" data-min="doubles" />
+          <input name="p1_2" placeholder="Third player" maxlength="40" data-min="3v3" />
+        </fieldset>
+      </div>
+      <p class="muted small">Tip: short names (surnames) look best, like on BWF TV.</p>
+
+      <div class="grid2">
+        <div class="field">
+          <span class="label">Points per game</span>
+          <div class="seg" role="radiogroup">
+            <label><input type="radio" name="preset" value="21" checked /><span>21</span></label>
+            <label><input type="radio" name="preset" value="15" /><span>15</span></label>
+            <label><input type="radio" name="preset" value="11" /><span>11</span></label>
+            <label><input type="radio" name="preset" value="custom" /><span>Other</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <span class="label">Number of games</span>
+          <div class="seg" role="radiogroup">
+            <label><input type="radio" name="bestOf" value="1" /><span>1 game</span></label>
+            <label><input type="radio" name="bestOf" value="3" checked /><span>Best of 3</span></label>
+            <label><input type="radio" name="bestOf" value="5" /><span>Best of 5</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid3">
+        <label class="field">
+          <span class="label">Game is won at</span>
+          <input type="number" name="pointsToWin" min="1" max="99" value="21" />
+        </label>
+        <label class="field">
+          <span class="label">Deuce</span>
+          <select name="winBy">
+            <option value="2">Yes – win by 2</option>
+            <option value="1">No – first to the target</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="label">Point cap</span>
+          <input type="number" name="cap" min="0" max="99" value="30" title="At this score the next point wins (30 in BWF 21-point games). 0 = no cap." />
+        </label>
+      </div>
+
+      <div class="field">
+        <span class="label">Who serves first?</span>
+        <div class="seg" role="radiogroup">
+          <label><input type="radio" name="firstServer" value="0" checked /><span id="serve-label-0">Side 1</span></label>
+          <label><input type="radio" name="firstServer" value="1" /><span id="serve-label-1">Side 2</span></label>
+        </div>
+      </div>
+
+      <label class="field">
+        <span class="label">Title on the scoreboard (optional)</span>
+        <input name="title" placeholder="e.g. Telangana State Ranking · Quarter Final" maxlength="60" />
+      </label>
+
+      <details class="advanced">
+        <summary>Recording started mid-match?</summary>
+        <p class="muted small">Enter games already finished before the video starts and the score at the start of the video.</p>
+        <div class="grid3">
+          <label class="field"><span class="label">Game 1 (Side 1 – Side 2)</span><input name="prior0" placeholder="e.g. 21-17" /></label>
+          <label class="field"><span class="label">Game 2</span><input name="prior1" placeholder="e.g. 18-21" /></label>
+          <label class="field"><span class="label">Score when video starts</span><input name="startScore" placeholder="0-0" /></label>
+        </div>
+      </details>
+
+      <h2 class="mt">Scoreboard look</h2>
+      <div class="grid3">
+        <label class="field">
+          <span class="label">Colours</span>
+          <select name="theme">
+            <option value="bwf">BWF blue</option>
+            <option value="dark">Dark</option>
+            <option value="red">Red</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="label">Size</span>
+          <input type="range" name="scale" min="0.6" max="1.6" step="0.05" value="1" />
+        </label>
+        <label class="field">
+          <span class="label">Position</span>
+          <select name="position">
+            <option value="tl">Top left</option>
+            <option value="tr">Top right</option>
+          </select>
+        </label>
+      </div>
+      <div class="grid2">
+        <label class="check"><input type="checkbox" name="showHeader" checked /> Show title strip (event · category · game)</label>
+        <label class="field inline">
+          <span class="label">Keep game score on screen after a game ends</span>
+          <span><input type="number" name="gameEndHold" min="0" max="600" value="20" class="narrow" /> seconds</span>
+        </label>
+      </div>
+
+      <div class="preview-still">
+        <canvas id="setup-preview" width="1280" height="200"></canvas>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn primary big" id="start-btn" disabled>Start scoring →</button>
+        <span class="muted small" id="start-hint">Choose a video first.</span>
+      </div>
+    </form>
+  </main>
+
+  <!-- ============ STEP 2: SCORE ============ -->
+  <main id="screen-score" class="screen" hidden>
+    <div class="score-layout">
+      <section class="player-col">
+        <div id="stage" class="stage">
+          <video id="video" playsinline preload="auto"></video>
+          <canvas id="overlay"></canvas>
+          <div id="flash" class="flash" aria-live="polite"></div>
+        </div>
+
+        <div class="transport">
+          <button class="btn icon" id="back5" title="Back 5 s (J)">⟲ 5s</button>
+          <button class="btn icon" id="play" title="Play / pause (Space)">▶</button>
+          <button class="btn icon" id="fwd5" title="Forward 5 s (K)">5s ⟳</button>
+          <input type="range" id="seek" min="0" max="1000" value="0" step="1" aria-label="Seek" />
+          <span id="time" class="mono">0:00 / 0:00</span>
+          <select id="speed" title="Playback speed ([ and ])">
+            <option value="1">1×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+            <option value="3">3×</option>
+          </select>
+        </div>
+
+        <div class="point-buttons">
+          <button class="btn point" id="point0"><span class="key">A / ←</span><span class="who" id="point0-name">Side 1</span><span class="sub">won the rally</span></button>
+          <button class="btn undo" id="undo" title="Undo last point (Z / Backspace)">↶ Undo</button>
+          <button class="btn point" id="point1"><span class="key">L / →</span><span class="who" id="point1-name">Side 2</span><span class="sub">won the rally</span></button>
+        </div>
+        <p class="muted small center">Press the button <b>when the rally ends</b> — the scoreboard changes at that moment of the video. Speed up to 2× between rallies to finish faster.</p>
+      </section>
+
+      <aside class="side-col card">
+        <div class="side-head">
+          <h3>Rallies <span id="rally-count" class="pill">0</span></h3>
+          <button class="btn primary" id="to-export">Export →</button>
+        </div>
+        <div id="match-summary" class="summary"></div>
+        <ol id="rally-list" class="rally-list" reversed></ol>
+        <div class="side-foot">
+          <button class="btn ghost small" id="back-setup">← Edit match setup</button>
+          <button class="btn ghost small" id="save-project">Save project file</button>
+        </div>
+        <details class="keys">
+          <summary>Keyboard shortcuts</summary>
+          <ul>
+            <li><kbd>A</kbd> or <kbd>←</kbd> point to side 1</li>
+            <li><kbd>L</kbd> or <kbd>→</kbd> point to side 2</li>
+            <li><kbd>Z</kbd> or <kbd>Backspace</kbd> undo the last point</li>
+            <li><kbd>Space</kbd> play / pause</li>
+            <li><kbd>J</kbd> / <kbd>K</kbd> back / forward 5 s (with <kbd>Shift</kbd>: 30 s)</li>
+            <li><kbd>,</kbd> / <kbd>.</kbd> step one frame (when paused)</li>
+            <li><kbd>[</kbd> / <kbd>]</kbd> slower / faster</li>
+          </ul>
+        </details>
+      </aside>
+    </div>
+  </main>
+
+  <!-- ============ STEP 3: EXPORT ============ -->
+  <main id="screen-export" class="screen" hidden>
+    <section class="card">
+      <h2>Export your video</h2>
+      <div id="export-summary" class="summary big"></div>
+
+      <div class="export-options">
+        <div class="option">
+          <h3>Make the video here</h3>
+          <p class="muted">Creates <b id="out-name">match-scoreboard.mp4</b> in this browser. Best in <b>Chrome or Edge on a laptop</b>. A 15-minute 1080p video usually takes 5–15 minutes. Keep this tab open while it runs.</p>
+          <label class="field">
+            <span class="label">Quality</span>
+            <select id="quality">
+              <option value="source">Same as original (recommended)</option>
+              <option value="high">High (12 Mbps)</option>
+              <option value="small">Smaller file (6 Mbps)</option>
+            </select>
+          </label>
+          <button class="btn primary big" id="export-browser">Create video</button>
+          <div id="export-progress" class="progress" hidden>
+            <div class="bar"><div id="progress-fill"></div></div>
+            <div class="progress-row"><span id="progress-text">Starting…</span><button class="btn ghost small" id="export-cancel">Cancel</button></div>
+          </div>
+          <div id="export-result" class="notice" hidden></div>
+          <p id="browser-unsupported" class="notice warn" hidden>This browser can't create videos itself. Use Chrome or Edge, or the ffmpeg kit on the right.</p>
+        </div>
+
+        <div class="option">
+          <h3>ffmpeg kit (fastest, any computer)</h3>
+          <p class="muted">Downloads a small ZIP with the scoreboard graphics and a script that adds them to your video using <a href="https://ffmpeg.org" target="_blank" rel="noopener">ffmpeg</a> (free). Fastest option and the sound is kept exactly as recorded. Install ffmpeg once, then double-click the script.</p>
+          <button class="btn big" id="export-kit">Download ffmpeg kit (.zip)</button>
+          <div id="kit-progress" class="muted small"></div>
+        </div>
+      </div>
+
+      <h3 class="mt">YouTube description</h3>
+      <p class="muted small">Includes the result and chapter timestamps for each game. YouTube turns these into chapters automatically.</p>
+      <textarea id="yt-text" rows="9" readonly></textarea>
+      <div class="actions">
+        <button class="btn" id="copy-yt">Copy description</button>
+        <button class="btn ghost" id="back-score">← Back to scoring</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot muted small">Runs entirely in your browser. Your videos are never uploaded.</footer>
+
+  <script src="vendor/mp4box.all.min.js"></script>
+  <script src="vendor/mp4-muxer.js"></script>
+  <script src="js/scoring.js"></script>
+  <script src="js/overlay.js"></script>
+  <script src="js/zip.js"></script>
+  <script src="js/exporter.js"></script>
+  <script src="js/ffmpegkit.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
