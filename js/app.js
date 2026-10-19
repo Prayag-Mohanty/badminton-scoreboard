@@ -1,4 +1,4 @@
-/* global Scoring, Overlay, Exporter, FfmpegKit */
+/* global Scoring, Overlay, Exporter, FfmpegKit, YouTube */
 (function () {
   'use strict';
 
@@ -8,7 +8,9 @@
   const STORAGE_PREFIX = 'badminton-scoreboard:v1:';
 
   const app = {
+    source: null, // 'file' | 'youtube'
     file: null,
+    youtube: null, // YouTube player wrapper (see js/youtube.js) when scoring from a link
     videoUrl: null,
     video: { width: 0, height: 0, duration: 0 },
     config: null, // raw config from the form
@@ -24,7 +26,25 @@
   // ---------------------------------------------------------------- utils
 
   function storageKey() {
+    if (app.source === 'youtube') return `${STORAGE_PREFIX}yt:${app.youtube.id}`;
     return app.file ? `${STORAGE_PREFIX}${app.file.name}:${app.file.size}` : null;
+  }
+
+  // The local <video> element, behind the same small interface as the YouTube player.
+  const videoEl = $('#video');
+  const filePlayer = {
+    getTime: () => videoEl.currentTime,
+    seek: (t) => (videoEl.currentTime = Math.max(0, Math.min(videoEl.duration || 0, t))),
+    play: () => videoEl.play(),
+    pause: () => videoEl.pause(),
+    isPaused: () => videoEl.paused,
+    setRate: (r) => (videoEl.playbackRate = r),
+    duration: () => videoEl.duration || 0,
+    maxRate: () => 3,
+  };
+
+  function player() {
+    return app.source === 'youtube' ? app.youtube : filePlayer;
   }
 
   function safeStorage(fn) {
@@ -59,7 +79,7 @@
   }
 
   function baseName() {
-    const n = app.file ? app.file.name : 'match.mp4';
+    const n = app.source === 'file' && app.file ? app.file.name : 'match.mp4';
     const dot = n.lastIndexOf('.');
     return dot > 0 ? n.slice(0, dot) : n;
   }
@@ -74,7 +94,7 @@
   function show(screen) {
     for (const s of ['setup', 'score', 'export']) $(`#screen-${s}`).hidden = s !== screen;
     $$('.step').forEach((el) => el.classList.toggle('active', el.dataset.step === screen));
-    if (screen !== 'score' && !$('#video').paused) $('#video').pause();
+    if (screen !== 'score' && app.source && !player().isPaused()) player().pause();
     window.scrollTo(0, 0);
   }
 
@@ -201,7 +221,7 @@
   form.addEventListener('change', onFormChange);
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (!app.file) return;
+    if (!app.source) return;
     startScoring();
   });
 
@@ -221,15 +241,33 @@
     if (f) chooseFile(f);
   });
 
-  function chooseFile(file) {
-    app.file = file;
-    if (app.videoUrl) URL.revokeObjectURL(app.videoUrl);
-    app.videoUrl = URL.createObjectURL(file);
+  function resetSource() {
+    if (app.youtube) app.youtube.destroy();
+    app.youtube = null;
+    // The YouTube API replaces the placeholder with an iframe; put a fresh one back.
+    $('#yt-wrap').replaceChildren(Object.assign(document.createElement('div'), { id: 'yt-player' }));
     app.events = [];
     app.nextId = 1;
     app.started = false;
+    $('#resume-box').hidden = true;
+  }
+
+  function useSourceUi(kind) {
+    $('#video').hidden = kind !== 'file';
+    $('#yt-wrap').hidden = kind !== 'youtube';
+    $('#yt-catcher').hidden = kind !== 'youtube';
+    $('#speed-3').hidden = kind === 'youtube'; // YouTube plays at most 2×
     $('.dz-empty').hidden = true;
     $('.dz-file').hidden = false;
+  }
+
+  function chooseFile(file) {
+    resetSource();
+    app.source = 'file';
+    useSourceUi('file');
+    app.file = file;
+    if (app.videoUrl) URL.revokeObjectURL(app.videoUrl);
+    app.videoUrl = URL.createObjectURL(file);
     $('#file-name').textContent = file.name;
     $('#file-meta').textContent = `${formatBytes(file.size)} · reading…`;
     $('#start-btn').disabled = true;
@@ -250,6 +288,51 @@
         "Your browser can't play this file. iPhone HEVC videos play in Safari and in Chrome/Edge on most computers; or set the iPhone camera to 'Most Compatible'.";
     };
   }
+
+  async function chooseYouTube(input) {
+    const id = YouTube.parseId(input);
+    const status = $('#file-meta');
+    if (!id) {
+      alert("That doesn't look like a YouTube video link. Copy it from the Share button on YouTube.");
+      return false;
+    }
+    resetSource();
+    videoEl.pause();
+    videoEl.removeAttribute('src');
+    videoEl.load();
+    app.file = null;
+    app.source = 'youtube';
+    useSourceUi('youtube');
+    $('#file-name').textContent = 'YouTube video';
+    status.textContent = 'Loading from YouTube…';
+    $('#start-btn').disabled = true;
+    $('#start-hint').textContent = 'Loading video…';
+    try {
+      app.youtube = await YouTube.createPlayer($('#yt-player'), id);
+    } catch (e) {
+      app.source = null;
+      $('#file-name').textContent = 'YouTube video';
+      status.textContent = e.message;
+      $('#start-hint').textContent = e.message;
+      return false;
+    }
+    const d = app.youtube.duration();
+    app.video = { width: 1920, height: 1080, duration: d };
+    $('#file-name').textContent = app.youtube.title;
+    status.textContent = `YouTube · ${Scoring.formatTime(d)}`;
+    $('#start-btn').disabled = false;
+    $('#start-hint').textContent = '';
+    offerResume();
+    return true;
+  }
+
+  $('#yt-load').addEventListener('click', () => chooseYouTube($('#yt-url').value));
+  $('#yt-url').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      chooseYouTube(e.target.value);
+    }
+  });
 
   function offerResume() {
     const box = $('#resume-box');
@@ -287,7 +370,12 @@
       app: 'badminton-scoreboard',
       version: 1,
       savedAt: new Date().toISOString(),
-      video: app.file ? { name: app.file.name, size: app.file.size, duration: app.video.duration } : null,
+      video:
+        app.source === 'youtube'
+          ? { youtube: app.youtube.id, title: app.youtube.title, duration: app.video.duration }
+          : app.file
+            ? { name: app.file.name, size: app.file.size, duration: app.video.duration }
+            : null,
       config: app.config,
       look: app.look,
       events: app.events.map((e) => ({ t: Math.round(e.t * 1000) / 1000, w: e.w })),
@@ -314,15 +402,21 @@
     try {
       const p = JSON.parse(await f.text());
       if (p.app !== 'badminton-scoreboard') throw new Error('not a project file');
-      if (app.file) {
+      if (app.source) {
         loadProject(p);
-        if (p.video && p.video.name !== app.file.name) {
-          alert(`Loaded. Note: this project was made for "${p.video.name}", but the chosen video is "${app.file.name}".`);
-        }
+        const made = p.video && (p.video.name || p.video.title);
+        const current = app.source === 'youtube' ? app.youtube.title : app.file.name;
+        if (made && made !== current) alert(`Loaded. Note: this project was made for "${made}", but the current video is "${current}".`);
+      } else if (p.video && p.video.youtube) {
+        // Scored on YouTube: reopen that video automatically.
+        app.pendingProject = p;
+        writeForm(p.config, p.look);
+        $('#yt-url').value = `https://youtu.be/${p.video.youtube}`;
+        chooseYouTube(p.video.youtube);
       } else {
         app.pendingProject = p;
         writeForm(p.config, p.look);
-        alert(`Project loaded (${(p.events || []).length} rallies). Now choose the video${p.video ? ` "${p.video.name}"` : ''}.`);
+        alert(`Project loaded (${(p.events || []).length} rallies). Now choose the video${p.video && p.video.name ? ` "${p.video.name}"` : ''}.`);
       }
     } catch (err) {
       alert("That file couldn't be loaded as a scoreboard project.");
@@ -336,7 +430,6 @@
 
   // ---------------------------------------------------------------- scoring screen
 
-  const video = $('#video');
   const overlay = $('#overlay');
   const octx = overlay.getContext('2d');
   let lastDrawKey = '';
@@ -348,6 +441,11 @@
     overlay.width = app.video.width;
     overlay.height = app.video.height;
     $('#stage').style.aspectRatio = `${app.video.width} / ${app.video.height}`;
+    const speed = $('#speed');
+    if (parseFloat(speed.value) > player().maxRate()) {
+      speed.value = '1';
+      player().setRate(1);
+    }
     $('#point0-name').textContent = teamLabel(0);
     $('#point1-name').textContent = teamLabel(1);
     rebuild();
@@ -370,7 +468,7 @@
   function renderLoop() {
     requestAnimationFrame(renderLoop);
     if ($('#screen-score').hidden || !app.timeline) return;
-    const t = video.currentTime;
+    const t = player().getTime();
     const st = Scoring.stateAt(app.timeline, t);
     const key = JSON.stringify(st) + JSON.stringify(app.look);
     if (key !== lastDrawKey) {
@@ -383,12 +481,24 @@
   }
 
   function updateTransport() {
-    const d = video.duration || 0;
+    const p = player();
+    const d = p.duration();
+    const t = p.getTime();
     const seek = $('#seek');
-    if (!seek.matches(':active')) seek.value = d ? Math.round((video.currentTime / d) * 1000) : 0;
+    if (!seek.matches(':active')) seek.value = d ? Math.round((t / d) * 1000) : 0;
     const withHours = d >= 3600;
-    $('#time').textContent = `${Scoring.formatTime(video.currentTime, withHours)} / ${Scoring.formatTime(d, withHours)}`;
-    $('#play').textContent = video.paused ? '▶' : '❚❚';
+    $('#time').textContent = `${Scoring.formatTime(t, withHours)} / ${Scoring.formatTime(d, withHours)}`;
+    $('#play').textContent = p.isPaused() ? '▶' : '❚❚';
+  }
+
+  function togglePlay() {
+    const p = player();
+    if (p.isPaused()) p.play();
+    else p.pause();
+  }
+
+  function seekBy(dt) {
+    player().seek(player().getTime() + dt);
   }
 
   let flashTimer = null;
@@ -401,7 +511,7 @@
   }
 
   function addPoint(w) {
-    const t = video.currentTime;
+    const t = player().getTime();
     const before = Scoring.stateAt(app.timeline, t);
     if (before.matchWinner !== null && before.rallies === app.timeline.steps.length) {
       flash('The match is already over. Undo or delete points to change it.');
@@ -461,7 +571,7 @@
           rebuild();
           return;
         }
-        video.currentTime = Math.max(0, step.t - 3);
+        player().seek(step.t - 3);
       });
       frag.appendChild(li);
     }
@@ -511,23 +621,27 @@
   }
 
   // transport
-  $('#play').addEventListener('click', () => (video.paused ? video.play() : video.pause()));
-  $('#back5').addEventListener('click', () => (video.currentTime = Math.max(0, video.currentTime - 5)));
-  $('#fwd5').addEventListener('click', () => (video.currentTime = Math.min(video.duration, video.currentTime + 5)));
-  $('#seek').addEventListener('input', (e) => (video.currentTime = (e.target.value / 1000) * (video.duration || 0)));
-  $('#speed').addEventListener('change', (e) => (video.playbackRate = parseFloat(e.target.value)));
+  $('#play').addEventListener('click', togglePlay);
+  $('#back5').addEventListener('click', () => seekBy(-5));
+  $('#fwd5').addEventListener('click', () => seekBy(5));
+  $('#seek').addEventListener('input', (e) => player().seek((e.target.value / 1000) * player().duration()));
+  $('#speed').addEventListener('change', (e) => player().setRate(parseFloat(e.target.value)));
   $('#point0').addEventListener('click', () => addPoint(0));
   $('#point1').addEventListener('click', () => addPoint(1));
   $('#undo').addEventListener('click', undo);
   $('#back-setup').addEventListener('click', () => show('setup'));
   $('#to-export').addEventListener('click', openExport);
-  $('#stage').addEventListener('click', () => (video.paused ? video.play() : video.pause()));
+  $('#stage').addEventListener('click', togglePlay);
 
   function changeSpeed(dir) {
     const sel = $('#speed');
-    const i = Math.min(sel.options.length - 1, Math.max(0, sel.selectedIndex + dir));
+    const max = player().maxRate();
+    let i = sel.selectedIndex;
+    do i += dir;
+    while (i >= 0 && i < sel.options.length && parseFloat(sel.options[i].value) > max);
+    if (i < 0 || i >= sel.options.length) return;
     sel.selectedIndex = i;
-    video.playbackRate = parseFloat(sel.value);
+    player().setRate(parseFloat(sel.value));
     flash(`Speed ${sel.value}×`);
   }
 
@@ -540,15 +654,12 @@
     if (k === 'a' || k === 'A' || k === 'ArrowLeft') addPoint(0);
     else if (k === 'l' || k === 'L' || k === 'ArrowRight') addPoint(1);
     else if (k === 'z' || k === 'Z' || k === 'Backspace') undo();
-    else if (k === ' ' || k === 'Spacebar') video.paused ? video.play() : video.pause();
-    else if (k === 'j' || k === 'J') video.currentTime = Math.max(0, video.currentTime - (e.shiftKey ? 30 : 5));
-    else if (k === 'k' || k === 'K') video.currentTime = Math.min(video.duration, video.currentTime + (e.shiftKey ? 30 : 5));
-    else if (k === ',') {
-      video.pause();
-      video.currentTime = Math.max(0, video.currentTime - 1 / 30);
-    } else if (k === '.') {
-      video.pause();
-      video.currentTime = Math.min(video.duration, video.currentTime + 1 / 30);
+    else if (k === ' ' || k === 'Spacebar') togglePlay();
+    else if (k === 'j' || k === 'J') seekBy(e.shiftKey ? -30 : -5);
+    else if (k === 'k' || k === 'K') seekBy(e.shiftKey ? 30 : 5);
+    else if (k === ',' || k === '.') {
+      player().pause();
+      seekBy(k === ',' ? -1 / 30 : 1 / 30);
     } else if (k === '[') changeSpeed(-1);
     else if (k === ']') changeSpeed(1);
     else handled = false;
@@ -565,8 +676,13 @@
     show('export');
     renderSummary($('#export-summary'), true);
     $('#yt-text').value = Scoring.youtubeSummary(app.timeline, app.video.duration);
-    $('#out-name').textContent = FfmpegKit.outputName(app.file.name);
-    const canBrowser = Exporter.isSupported() && /\.(mp4|m4v|mov)$/i.test(app.file.name);
+    const yt = app.source === 'youtube';
+    $('#yt-orig-note').hidden = !yt;
+    $('#kit-shape-field').hidden = !yt;
+    $('#browser-blurb').hidden = yt;
+    $('#export-browser').textContent = yt ? 'Choose original file & create video' : 'Create video';
+    $('#out-name').textContent = FfmpegKit.outputName(baseName() + '.mp4');
+    const canBrowser = Exporter.isSupported() && (yt || /\.(mp4|m4v|mov)$/i.test(app.file.name));
     $('#browser-unsupported').hidden = canBrowser;
     $('#export-browser').disabled = !canBrowser;
   }
@@ -600,8 +716,24 @@
     return `${Math.round(sec / 60)} min left`;
   }
 
-  $('#export-browser').addEventListener('click', async () => {
-    const outName = FfmpegKit.outputName(app.file.name);
+  $('#export-browser').addEventListener('click', () => {
+    if (app.source === 'youtube') $('#orig-input').click();
+    else exportInBrowser(app.file);
+  });
+
+  $('#orig-input').addEventListener('change', (e) => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    if (!/\.(mp4|m4v|mov)$/i.test(f.name)) {
+      alert('Please choose an MP4 or MOV file, or use the ffmpeg kit for other formats.');
+      return;
+    }
+    exportInBrowser(f);
+  });
+
+  async function exportInBrowser(file) {
+    const outName = FfmpegKit.outputName(file.name);
     let writable = null;
     if (window.showSaveFilePicker) {
       try {
@@ -642,7 +774,7 @@
 
     try {
       const result = await Exporter.exportVideo({
-        file: app.file,
+        file,
         writable,
         bitrate,
         signal: controller.signal,
@@ -694,7 +826,7 @@
       $('#export-kit').disabled = false;
       $('#export-progress').hidden = true;
     }
-  });
+  }
 
   $('#export-cancel').addEventListener('click', () => app.exporting && app.exporting.abort());
 
@@ -703,15 +835,20 @@
     btn.disabled = true;
     try {
       await loadFonts();
+      // From YouTube we don't know the original file's size, only its shape; the
+      // kit's script scales the graphics to the real video anyway.
+      const portrait = app.source === 'youtube' && $('#kit-shape').value === 'portrait';
+      const size = app.source === 'youtube' ? (portrait ? [1080, 1920] : [1920, 1080]) : [app.video.width, app.video.height];
       const zip = await FfmpegKit.build({
         Scoring,
         Overlay,
         timeline: app.timeline,
         overlayOpts: app.look,
-        width: app.video.width,
-        height: app.video.height,
+        width: size[0],
+        height: size[1],
         duration: app.video.duration,
-        videoName: app.file.name,
+        videoName: app.source === 'youtube' ? 'match.mp4' : app.file.name,
+        fromYouTube: app.source === 'youtube',
         project: projectData(),
         onProgress: (f) => ($('#kit-progress').textContent = `Drawing scoreboards… ${Math.round(f * 100)}%`),
       });

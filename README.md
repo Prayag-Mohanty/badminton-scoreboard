@@ -3,6 +3,7 @@
 Add a **BWF-style live scoreboard** (top-left corner) to your badminton match recordings, so viewers always know the score.
 
 - Choose your match video. Files over 1 GB are fine, because **the video never leaves your computer**. Everything runs in the browser.
+- …or **paste a YouTube link** and score the match while watching it on YouTube (good on a phone, or when the big file is on another computer).
 - Answer a few questions: singles / doubles / 3 vs 3, men's / women's / mixed, 21, 15 or 11 points, best of 1/3/5, deuce and cap, who serves first, player names, and an optional event title.
 - Watch the video and press **A** (or ←) / **L** (or →) when each rally ends. The app applies the scoring rules for you: deuce, 30-point cap, game and match points, serve indicator, games won, and ends of games.
 - Export the same video with the scoreboard burned in, plus a ready-made **YouTube description with the result and chapters** for each game.
@@ -37,6 +38,18 @@ Add a **BWF-style live scoreboard** (top-left corner) to your badminton match re
    - **ffmpeg kit**: a small ZIP with the scoreboard graphics and a double-click script (`.bat` for Windows, `.sh` for Mac/Linux) that burns them in with [ffmpeg](https://ffmpeg.org). This is the fastest option and works in any browser and with any video format.
    - Copy the generated **YouTube description** (result + chapters).
 
+## Scoring from a YouTube link
+
+Paste the link (watch, youtu.be, Shorts and live links all work) instead of choosing a file. The video plays inside the app and you score it exactly the same way. YouTube allows at most 2× speed.
+
+- The **YouTube description with chapters** is ready straight away. Paste it into that video in YouTube Studio.
+- To get a video with the scoreboard burned in, you need the **original file** (YouTube doesn't allow downloading from a link; your own uploads can be downloaded in YouTube Studio → Content → ⋮ → Download):
+  - **Choose original file & create video** on the export screen, or
+  - download the **ffmpeg kit** and run it on the original file. The script resizes the scoreboard to fit the video's real size.
+- Timings come from the YouTube video, so the original file must start at the same moment. If you trimmed the start in YouTube Studio's editor, the scoreboard would be early.
+- The video must allow embedding (on by default; private videos don't work, unlisted ones do). The app must be opened over http(s), e.g. GitHub Pages, not as a local file.
+- **Save project file** stores the YouTube link too. Loading the project later reopens the video with all your points.
+
 ## Running it
 
 It's a static website with no build step and no server-side code.
@@ -57,7 +70,7 @@ iPhone videos recorded in HEVC ("High Efficiency") need a browser that can play 
 ## Development
 
 ```
-npm test        # scoring engine tests (node --test)
+npm test        # scoring engine + YouTube link tests (node --test)
 npm start       # serve locally
 ```
 
@@ -65,5 +78,6 @@ npm start       # serve locally
 - `js/overlay.js`: draws the scoreboard on a canvas (used by the preview and both exports)
 - `js/exporter.js`: WebCodecs pipeline: mp4box.js demux → decode → draw → encode → mp4-muxer
 - `js/ffmpegkit.js`, `js/zip.js`: ffmpeg kit export
+- `js/youtube.js`: YouTube link parsing and IFrame-player wrapper (same interface as the local video)
 - `js/app.js`, `index.html`, `css/style.css`: the UI
 - `vendor/`: [mp4box.js](https://github.com/gpac/mp4box.js) 0.5.2 (BSD-3) and [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) 5.2.2 (MIT)

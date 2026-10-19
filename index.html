@@ -35,6 +35,12 @@
           <span id="file-meta"></span>
         </div>
       </label>
+      <div class="or"><span>or score it from YouTube</span></div>
+      <div class="yt-row">
+        <input id="yt-url" type="url" inputmode="url" placeholder="Paste a YouTube link, e.g. https://youtu.be/…" />
+        <button type="button" class="btn" id="yt-load">Use this video</button>
+      </div>
+      <p class="muted small">Handy on your phone or when the big file is on another computer. You get the YouTube chapters straight away. To burn the scoreboard in, add the original file later on the export screen.</p>
       <div id="resume-box" class="notice" hidden></div>
       <p class="muted small">Have a saved project? <label class="link">Load project file<input id="project-input" type="file" accept=".json,application/json" hidden /></label></p>
     </section>
@@ -186,7 +192,9 @@
       <section class="player-col">
         <div id="stage" class="stage">
           <video id="video" playsinline preload="auto"></video>
+          <div id="yt-wrap" hidden><div id="yt-player"></div></div>
           <canvas id="overlay"></canvas>
+          <div id="yt-catcher" title="Play / pause" hidden></div>
           <div id="flash" class="flash" aria-live="polite"></div>
         </div>
 
@@ -200,7 +208,7 @@
             <option value="1">1×</option>
             <option value="1.5">1.5×</option>
             <option value="2">2×</option>
-            <option value="3">3×</option>
+            <option value="3" id="speed-3">3×</option>
           </select>
         </div>
 
@@ -248,7 +256,9 @@
       <div class="export-options">
         <div class="option">
           <h3>Make the video here</h3>
-          <p class="muted">Creates <b id="out-name">match-scoreboard.mp4</b> in this browser. Best in <b>Chrome or Edge on a laptop</b>. A 15-minute 1080p video usually takes 5–15 minutes. Keep this tab open while it runs.</p>
+          <p class="notice" id="yt-orig-note" hidden>You scored this match on YouTube. Choose the <b>original video file</b> (the one you uploaded) and the scoreboard is added to it. Timings match as long as you didn't trim the start of the video in YouTube Studio.</p>
+          <input id="orig-input" type="file" accept="video/*,.mp4,.mov,.m4v" hidden />
+          <p class="muted" id="browser-blurb">Creates <b id="out-name">match-scoreboard.mp4</b> in this browser. Best in <b>Chrome or Edge on a laptop</b>. A 15-minute 1080p video usually takes 5–15 minutes. Keep this tab open while it runs.</p>
           <label class="field">
             <span class="label">Quality</span>
             <select id="quality">
@@ -269,6 +279,13 @@
         <div class="option">
           <h3>ffmpeg kit (fastest, any computer)</h3>
           <p class="muted">Downloads a small ZIP with the scoreboard graphics and a script that adds them to your video using <a href="https://ffmpeg.org" target="_blank" rel="noopener">ffmpeg</a> (free). Fastest option and the sound is kept exactly as recorded. Install ffmpeg once, then double-click the script.</p>
+          <label class="field" id="kit-shape-field" hidden>
+            <span class="label">Original video is</span>
+            <select id="kit-shape">
+              <option value="landscape">Landscape (horizontal)</option>
+              <option value="portrait">Portrait (vertical)</option>
+            </select>
+          </label>
           <button class="btn big" id="export-kit">Download ffmpeg kit (.zip)</button>
           <div id="kit-progress" class="muted small"></div>
         </div>
@@ -293,6 +310,7 @@
   <script src="js/zip.js"></script>
   <script src="js/exporter.js"></script>
   <script src="js/ffmpegkit.js"></script>
+  <script src="js/youtube.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
