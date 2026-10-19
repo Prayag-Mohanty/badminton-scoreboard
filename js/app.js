@@ -124,6 +124,8 @@
       startScore: parseScore(fd.get('startScore')) || [0, 0],
       gameEndHold: fd.get('gameEndHold'),
       preset: fd.get('preset'),
+      startNear: fd.get('startNear'),
+      changeEnds: fd.get('changeEnds') === 'on',
     };
     const look = {
       theme: fd.get('theme'),
@@ -146,6 +148,8 @@
     setRadio('bestOf', String(c.bestOf || 3));
     setRadio('firstServer', String(c.firstServer || 0));
     setRadio('preset', c.preset || 'custom');
+    setRadio('startNear', String(c.startNear || 0));
+    form.elements.changeEnds.checked = c.changeEnds !== false;
     form.elements.title.value = c.title || '';
     form.elements.pointsToWin.value = c.pointsToWin || 21;
     form.elements.winBy.value = String(c.winBy || 2);
@@ -193,6 +197,8 @@
     app.look = look;
     $('#serve-label-0').textContent = teamLabel(0);
     $('#serve-label-1').textContent = teamLabel(1);
+    $('#near-label-0').textContent = teamLabel(0);
+    $('#near-label-1').textContent = teamLabel(1);
     drawSetupPreview();
     if (app.events.length) rebuild();
     persist();
@@ -446,9 +452,8 @@
       speed.value = '1';
       player().setRate(1);
     }
-    $('#point0-name').textContent = teamLabel(0);
-    $('#point1-name').textContent = teamLabel(1);
     rebuild();
+    nearShown = null;
     show('score');
     lastDrawKey = '';
   }
@@ -477,7 +482,27 @@
       Overlay.draw(octx, app.timeline.cfg, st, overlayOpts(overlay.width, overlay.height));
       highlightCurrentRally(st.rallies - 1);
     }
+    updateCourtButtons(t);
     updateTransport();
+  }
+
+  // The up/down buttons follow the players: whoever is on the near court
+  // (back to the camera) at this point of the match gets "↓".
+  let nearShown = null;
+  function updateCourtButtons(t) {
+    const near = Scoring.nearSideAt(app.timeline, t);
+    if (near === nearShown) return;
+    nearShown = near;
+    const far = 1 - near;
+    $('#near-name').textContent = teamLabel(near);
+    $('#far-name').textContent = teamLabel(far);
+    $('#point-near').className = `btn point side${near}`;
+    $('#point-far').className = `btn point side${far}`;
+  }
+
+  function addPointByCourt(court) {
+    const near = Scoring.nearSideAt(app.timeline, player().getTime());
+    addPoint(court === 'near' ? near : 1 - near, court);
   }
 
   function updateTransport() {
@@ -507,11 +532,12 @@
     el.textContent = text;
     el.classList.add('show');
     clearTimeout(flashTimer);
-    flashTimer = setTimeout(() => el.classList.remove('show'), 1200);
+    flashTimer = setTimeout(() => el.classList.remove('show'), text.length > 40 ? 2600 : 1200);
   }
 
-  function addPoint(w) {
+  function addPoint(w, court) {
     const t = player().getTime();
+    const nearBefore = Scoring.nearSideAt(app.timeline, t);
     const before = Scoring.stateAt(app.timeline, t);
     if (before.matchWinner !== null && before.rallies === app.timeline.steps.length) {
       flash('The match is already over. Undo or delete points to change it.');
@@ -520,12 +546,14 @@
     app.events.push({ id: app.nextId++, t, w });
     rebuild();
     const st = Scoring.stateAt(app.timeline, t);
-    const btn = $(`#point${w}`);
+    const btn = $(court === 'far' || (!court && w !== nearBefore) ? '#point-far' : '#point-near');
     btn.classList.add('hit');
     setTimeout(() => btn.classList.remove('hit'), 150);
     let msg = `${teamLabel(w)}  ${st.score[0]}–${st.score[1]}`;
     if (st.status === 'GAME' || st.status === 'MATCH') msg = `${st.status} ${teamLabel(w)}  ${st.score[0]}–${st.score[1]}`;
     else if (st.status) msg += ` · ${st.status}`;
+    const nearAfter = Scoring.nearSideAt(app.timeline, t);
+    if (nearAfter !== nearBefore && st.status !== 'MATCH') msg += ` · Change ends: ${teamLabel(nearAfter)} now near the camera`;
     flash(msg);
   }
 
@@ -626,8 +654,8 @@
   $('#fwd5').addEventListener('click', () => seekBy(5));
   $('#seek').addEventListener('input', (e) => player().seek((e.target.value / 1000) * player().duration()));
   $('#speed').addEventListener('change', (e) => player().setRate(parseFloat(e.target.value)));
-  $('#point0').addEventListener('click', () => addPoint(0));
-  $('#point1').addEventListener('click', () => addPoint(1));
+  $('#point-far').addEventListener('click', () => addPointByCourt('far'));
+  $('#point-near').addEventListener('click', () => addPointByCourt('near'));
   $('#undo').addEventListener('click', undo);
   $('#back-setup').addEventListener('click', () => show('setup'));
   $('#to-export').addEventListener('click', openExport);
@@ -651,8 +679,10 @@
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const k = e.key;
     let handled = true;
-    if (k === 'a' || k === 'A' || k === 'ArrowLeft') addPoint(0);
-    else if (k === 'l' || k === 'L' || k === 'ArrowRight') addPoint(1);
+    if (k === 'ArrowUp') addPointByCourt('far');
+    else if (k === 'ArrowDown') addPointByCourt('near');
+    else if (k === 'a' || k === 'A') addPoint(0);
+    else if (k === 'l' || k === 'L') addPoint(1);
     else if (k === 'z' || k === 'Z' || k === 'Backspace') undo();
     else if (k === ' ' || k === 'Spacebar') togglePlay();
     else if (k === 'j' || k === 'J') seekBy(e.shiftKey ? -30 : -5);

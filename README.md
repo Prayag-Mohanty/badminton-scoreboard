@@ -4,8 +4,8 @@ Add a **BWF-style live scoreboard** (top-left corner) to your badminton match re
 
 - Choose your match video. Files over 1 GB are fine, because **the video never leaves your computer**. Everything runs in the browser.
 - …or **paste a YouTube link** and score the match while watching it on YouTube (good on a phone, or when the big file is on another computer).
-- Answer a few questions: singles / doubles / 3 vs 3, men's / women's / mixed, 21, 15 or 11 points, best of 1/3/5, deuce and cap, who serves first, player names, and an optional event title.
-- Watch the video and press **A** (or ←) / **L** (or →) when each rally ends. The app applies the scoring rules for you: deuce, 30-point cap, game and match points, serve indicator, games won, and ends of games.
+- Answer a few questions: singles / doubles / 3 vs 3, men's / women's / mixed, 21, 15 or 11 points, best of 1/3/5, deuce and cap, who serves first, who is near the camera at the start, player names, and an optional event title.
+- Watch the video and press **↑** when the far player (facing the camera) wins a rally, or **↓** when the near player (back to the camera) wins it. The app knows who is where and swaps them automatically when players change ends. The app applies the scoring rules for you: deuce, 30-point cap, game and match points, serve indicator, games won, and ends of games.
 - Export the same video with the scoreboard burned in, plus a ready-made **YouTube description with the result and chapters** for each game.
 
 ## What the scoreboard shows
@@ -29,7 +29,9 @@ Add a **BWF-style live scoreboard** (top-left corner) to your badminton match re
 1. Open the app (see *Running it* below) in **Chrome or Edge** on a laptop/desktop.
 2. **Setup**: choose the video and fill in the match details. Use *"Recording started mid-match?"* if you began filming after game 1.
 3. **Score the match**: play the video. Press the button or key for the side that won each rally **when the rally ends**. The score changes at that moment in the video.
-   - `A`/`←` point to side 1 · `L`/`→` point to side 2 · `Z`/`Backspace` undo
+   - `↑` point to the far player (facing the camera) · `↓` point to the near player (back to the camera)
+   - Players change ends after each game and at 11 in the deciding game (8 in 15-point games, 6 in 11-point games). The ↑/↓ buttons follow them automatically and show who is where. Untick "Players change ends" for casual games where nobody switches.
+   - `A` / `L` point to side 1 / side 2 by name · `Z`/`Backspace` undo
    - `Space` play/pause · `J`/`K` −5 s / +5 s (`Shift` = 30 s) · `,`/`.` frame step · `[`/`]` speed
    - Play at 2× between rallies; a 20-minute match takes about 10 minutes to score.
    - Click any rally in the list to jump to it. ✕ deletes a wrong point. Your work **auto-saves** in the browser, so you can close the tab and continue later. You can also save a project file.

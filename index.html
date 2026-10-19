@@ -130,6 +130,15 @@
         </div>
       </div>
 
+      <div class="field">
+        <span class="label">Who is near the camera (back to the camera) when the video starts?</span>
+        <div class="seg" role="radiogroup">
+          <label><input type="radio" name="startNear" value="0" checked /><span id="near-label-0">Side 1</span></label>
+          <label><input type="radio" name="startNear" value="1" /><span id="near-label-1">Side 2</span></label>
+        </div>
+        <label class="check small"><input type="checkbox" name="changeEnds" checked /> Players change ends after each game, and at the halfway score (11) of the deciding game</label>
+      </div>
+
       <label class="field">
         <span class="label">Title on the scoreboard (optional)</span>
         <input name="title" placeholder="e.g. Telangana State Ranking · Quarter Final" maxlength="60" />
@@ -213,9 +222,13 @@
         </div>
 
         <div class="point-buttons">
-          <button class="btn point" id="point0"><span class="key">A / ←</span><span class="who" id="point0-name">Side 1</span><span class="sub">won the rally</span></button>
+          <button class="btn point" id="point-far" title="Far player (facing the camera) won the rally — ↑">
+            <span class="key">↑</span><span class="who" id="far-name">Side 2</span><span class="sub">far court · won the rally</span>
+          </button>
           <button class="btn undo" id="undo" title="Undo last point (Z / Backspace)">↶ Undo</button>
-          <button class="btn point" id="point1"><span class="key">L / →</span><span class="who" id="point1-name">Side 2</span><span class="sub">won the rally</span></button>
+          <button class="btn point" id="point-near" title="Near player (back to the camera) won the rally — ↓">
+            <span class="key">↓</span><span class="who" id="near-name">Side 1</span><span class="sub">near court · won the rally</span>
+          </button>
         </div>
         <p class="muted small center">Press the button <b>when the rally ends</b> — the scoreboard changes at that moment of the video. Speed up to 2× between rallies to finish faster.</p>
       </section>
@@ -234,8 +247,9 @@
         <details class="keys">
           <summary>Keyboard shortcuts</summary>
           <ul>
-            <li><kbd>A</kbd> or <kbd>←</kbd> point to side 1</li>
-            <li><kbd>L</kbd> or <kbd>→</kbd> point to side 2</li>
+            <li><kbd>↑</kbd> point to the far player (facing the camera)</li>
+            <li><kbd>↓</kbd> point to the near player (back to the camera)</li>
+            <li><kbd>A</kbd> / <kbd>L</kbd> point to side 1 / side 2 by name</li>
             <li><kbd>Z</kbd> or <kbd>Backspace</kbd> undo the last point</li>
             <li><kbd>Space</kbd> play / pause</li>
             <li><kbd>J</kbd> / <kbd>K</kbd> back / forward 5 s (with <kbd>Shift</kbd>: 30 s)</li>

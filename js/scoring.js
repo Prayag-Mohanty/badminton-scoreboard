@@ -44,6 +44,11 @@
     // After a game ends, the final score stays on screen this many seconds
     // before the board resets to 0-0 for the next game.
     gameEndHold: 20,
+    // Camera behind one baseline: which side is on the near court (back to
+    // the camera) when the video starts, and whether players change ends
+    // (after each game, and mid-way through the deciding game).
+    startNear: 0,
+    changeEnds: true,
   };
 
   function normalizeConfig(cfg) {
@@ -57,11 +62,40 @@
     c.priorGames = (c.priorGames || []).map((g) => [parseInt(g[0], 10) || 0, parseInt(g[1], 10) || 0]);
     c.startScore = [parseInt(c.startScore && c.startScore[0], 10) || 0, parseInt(c.startScore && c.startScore[1], 10) || 0];
     c.gameEndHold = Math.max(0, Number(c.gameEndHold) || 0);
+    c.startNear = parseInt(c.startNear, 10) === 1 ? 1 : 0;
+    c.changeEnds = c.changeEnds !== false && c.changeEnds !== 'false';
     if (!FORMAT_NAMES[c.format]) c.format = 'singles';
     if (!CATEGORY_PREFIX[c.category] && c.category !== 'O') c.category = 'O';
     if (c.format === 'singles' && c.category === 'X') c.category = 'O';
     c.categoryLabel = categoryLabel(c);
     return c;
+  }
+
+  /** Score at which players change ends in the deciding game: 11 of 21, 8 of 15, 6 of 11. */
+  function midGameChange(cfg) {
+    return Math.ceil(cfg.pointsToWin / 2);
+  }
+
+  /** Number of end changes that have happened by this (raw, not display) state. */
+  function endChanges(cfg, state) {
+    let n = state.games.length;
+    const deciding = state.matchWinner === null && state.games.length === cfg.bestOf - 1;
+    if (deciding && Math.max(state.score[0], state.score[1]) >= midGameChange(cfg)) n++;
+    return n;
+  }
+
+  /**
+   * Which side (0/1) is on the near court — back to the camera — right after
+   * the last rally before video time `t`. That's who the next rally's
+   * "near" button belongs to.
+   */
+  function nearSideAt(timeline, t) {
+    const cfg = timeline.cfg;
+    if (!cfg.changeEnds) return cfg.startNear;
+    const idx = stepIndexAt(timeline, t);
+    const s = idx >= 0 ? timeline.steps[idx].state : timeline.initial;
+    const flips = endChanges(cfg, s) - endChanges(cfg, timeline.initial);
+    return flips % 2 === 0 ? cfg.startNear : 1 - cfg.startNear;
   }
 
   function gamesToWin(cfg) {
@@ -321,5 +355,7 @@
     formatTime,
     teamName,
     youtubeSummary,
+    nearSideAt,
+    midGameChange,
   };
 });

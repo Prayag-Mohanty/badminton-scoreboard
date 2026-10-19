@@ -119,3 +119,34 @@ test('changeTimes includes interval resets', () => {
   assert.ok(times.includes(31));
   assert.strictEqual(times[0], 0);
 });
+
+test('near/far: ends change after each game and at 11 in the deciding game', () => {
+  const cfg = { startNear: 1 };
+  // Game 1 to side A 21-0 (t=1..21), game 2 to B 21-0 (t=22..42), then 10 points to A, then 1 more.
+  const ev = rallies('A'.repeat(21) + 'B'.repeat(21) + 'A'.repeat(11));
+  const tl = S.buildTimeline(cfg, ev);
+  assert.strictEqual(S.nearSideAt(tl, 0), 1); // start
+  assert.strictEqual(S.nearSideAt(tl, 20.5), 1); // still game 1
+  assert.strictEqual(S.nearSideAt(tl, 21), 0); // game 1 over -> change ends
+  assert.strictEqual(S.nearSideAt(tl, 42), 1); // game 2 over -> change again
+  assert.strictEqual(S.nearSideAt(tl, 52), 1); // game 3 at 10-0
+  assert.strictEqual(S.nearSideAt(tl, 53), 0); // 11-0 in the decider -> change ends
+});
+
+test('near/far: no change in a non-deciding game at 11, and option to never change', () => {
+  const tl = S.buildTimeline({ startNear: 0 }, rallies('A'.repeat(11)));
+  assert.strictEqual(S.nearSideAt(tl, 100), 0);
+  const fixed = S.buildTimeline({ startNear: 0, changeEnds: false }, rallies('A'.repeat(21)));
+  assert.strictEqual(S.nearSideAt(fixed, 100), 0);
+});
+
+test('near/far: video starting mid-way counts changes from the start of the video', () => {
+  // Video starts in game 3 at 12-9 (players already changed at 11) with side 0 near.
+  const tl = S.buildTimeline({ startNear: 0, priorGames: [[21, 18], [15, 21]], startScore: [12, 9] }, rallies('A'));
+  assert.strictEqual(S.nearSideAt(tl, 0), 0);
+  assert.strictEqual(S.nearSideAt(tl, 5), 0);
+  // 15-point games change at 8 in the decider; one-game match is the decider.
+  const one = S.buildTimeline(Object.assign({ bestOf: 1, startNear: 0 }, S.PRESETS['15']), rallies('B'.repeat(8)));
+  assert.strictEqual(S.nearSideAt(one, 7.5), 0);
+  assert.strictEqual(S.nearSideAt(one, 8), 1);
+});
