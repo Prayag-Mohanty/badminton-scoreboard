@@ -79,6 +79,7 @@
       let lastAt = 0;
       let rate = 1;
       let state = -1;
+      let current = null;
 
       const yt = new YT.Player(container, {
         videoId,
@@ -134,12 +135,19 @@
                 return Math.max.apply(null, rates.length ? rates : [2]);
               },
               destroy: () => yt.destroy(),
+              onError: null, // set by the app: errors reported after the video loaded
             };
-            // Duration can be 0 until the video starts loading; cue it briefly.
+            current = wrapper;
+            // Duration can be 0 until the video starts loading. If it never
+            // arrives, YouTube couldn't load the video (private, blocked, removed).
             const waitForDuration = (tries) => {
-              if (yt.getDuration() > 0 || tries <= 0) {
+              if (settled) return;
+              if (yt.getDuration() > 0) {
                 settled = true;
                 resolve(wrapper);
+              } else if (tries <= 0) {
+                settled = true;
+                reject(new Error("YouTube couldn't load this video. It may be private, removed, or not allowed to play on other websites."));
               } else setTimeout(() => waitForDuration(tries - 1), 200);
             };
             waitForDuration(25);
@@ -155,7 +163,7 @@
             if (!settled) {
               settled = true;
               reject(err);
-            }
+            } else if (current && current.onError) current.onError(err);
           },
         },
       });

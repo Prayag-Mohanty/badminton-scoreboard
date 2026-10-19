@@ -349,6 +349,10 @@
       $('#start-hint').textContent = e.message;
       return false;
     }
+    app.youtube.onError = (err) => {
+      status.textContent = err.message;
+      flash(err.message);
+    };
     const d = app.youtube.duration();
     app.video = { width: 1920, height: 1080, duration: d };
     $('#file-name').textContent = app.youtube.title;
