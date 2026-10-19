@@ -33,6 +33,8 @@
     priorGames: [],
     startScore: [0, 0],
     gameEndHold: 20,
+    startNear: 0,
+    changeEnds: true,
   };
   const DEFAULT_LOOK = { theme: 'bwf', scale: 1, position: 'tl', showHeader: true };
 
@@ -45,6 +47,7 @@
     scoring: false,
     lastKey: '',
     saveTimer: null,
+    nearShown: null,
   };
 
   // ------------------------------------------------------------------ helpers
@@ -159,19 +162,23 @@
     ui.flash = h('div', { class: 'bsb-flash' });
     ui.onVideo = h('input', { type: 'checkbox', onchange: (e) => setSetting('onVideo', e.target.checked) });
     ui.scoring = h('input', { type: 'checkbox', onchange: (e) => setScoring(e.target.checked) });
-    ui.names = [h('span', { class: 'bsb-name' }), h('span', { class: 'bsb-name' })];
-    ui.pt = [0, 1].map((side) =>
-      h('button', { class: `bsb-pt bsb-side${side}`, type: 'button', onclick: () => addPoint(side) }, [
-        h('kbd', { text: side ? KEYS.side1.toUpperCase() : KEYS.side0.toUpperCase() }),
-        ui.names[side],
-      ])
-    );
+    // Camera behind a baseline: far player (facing the camera) on top, near player below.
+    ui.courtNames = { far: h('span', { class: 'bsb-name' }), near: h('span', { class: 'bsb-name' }) };
+    ui.court = {};
+    for (const [court, key, label] of [['far', '↑', 'far'], ['near', '↓', 'near']]) {
+      ui.court[court] = h('button', { class: `bsb-pt bsb-${court}`, type: 'button', title: `${label} court won the rally (${key})`, onclick: () => addPointByCourt(court) }, [
+        h('kbd', { text: key }),
+        ui.courtNames[court],
+        h('small', { text: `${label} court` }),
+      ]);
+    }
+    ui.pt = [ui.court.far, ui.court.near];
     ui.undo = h('button', { class: 'bsb-undo', type: 'button', onclick: undo }, [h('kbd', { text: KEYS.undo.toUpperCase() }), ' Undo']);
     ui.rallies = h('ol', { class: 'bsb-rallies', reversed: true });
     ui.count = h('span', { class: 'bsb-count' });
     ui.scoringBox = h('div', { class: 'bsb-scoring' }, [
-      h('div', { class: 'bsb-points' }, [ui.pt[0], ui.undo, ui.pt[1]]),
-      h('div', { class: 'bsb-hint', text: 'Press when each rally ends. The score changes at that moment of the video.' }),
+      h('div', { class: 'bsb-points' }, [ui.court.far, ui.court.near, ui.undo]),
+      h('div', { class: 'bsb-hint', text: 'Press ↑ / ↓ when each rally ends. Q / P score side 1 / side 2 by name.' }),
       h('div', { class: 'bsb-rallies-head' }, [h('span', { text: 'Rallies ' }), ui.count]),
       ui.rallies,
     ]);
@@ -220,6 +227,8 @@
       preset: select('preset', [['21', '21 points (cap 30)'], ['15', '15 points (cap 21)'], ['11', '11 points (cap 15)'], ['nodeuce', '21 points, no deuce']]),
       bestOf: select('bestOf', [['1', '1 game'], ['3', 'Best of 3'], ['5', 'Best of 5']]),
       firstServer: select('firstServer', [['0', 'Side 1'], ['1', 'Side 2']]),
+      startNear: select('startNear', [['0', 'Side 1'], ['1', 'Side 2']]),
+      changeEnds: h('input', { type: 'checkbox', name: 'changeEnds' }),
       title: h('input', { name: 'title', maxlength: 60, placeholder: 'e.g. Hyderabad Open · Final' }),
       theme: select('theme', [['bwf', 'BWF blue'], ['dark', 'Dark'], ['red', 'Red']]),
       scale: h('input', { name: 'scale', type: 'range', min: 0.6, max: 1.6, step: 0.05 }),
@@ -235,7 +244,9 @@
         h('fieldset', { class: 'bsb-team' }, [h('legend', { text: 'Side 2' })].concat(players[1])),
       ]),
       h('div', { class: 'bsb-grid2' }, [field('Points', inputs.preset), field('Games', inputs.bestOf)]),
-      h('div', { class: 'bsb-grid2' }, [field('Serves first', inputs.firstServer), field('Score at video start', inputs.startScore)]),
+      h('div', { class: 'bsb-grid2' }, [field('Serves first', inputs.firstServer), field('Near camera at start', inputs.startNear)]),
+      h('label', { class: 'bsb-check' }, [inputs.changeEnds, ' Players change ends (after each game, and at 11 in the deciding game)']),
+      field('Score at video start (if you joined mid-game)', inputs.startScore),
       field('Title (optional)', inputs.title),
       h('div', { class: 'bsb-grid2' }, [field('Colours', inputs.theme), field('Size on video', inputs.scale)]),
       h('div', { class: 'bsb-row' }, [h('button', { type: 'button', class: 'bsb-primary', text: 'Done', onclick: () => togglePane(null) })])
@@ -254,6 +265,8 @@
         preset: preset === 'nodeuce' ? 'custom' : preset,
         bestOf: parseInt(fd.get('bestOf'), 10),
         firstServer: parseInt(fd.get('firstServer'), 10),
+        startNear: parseInt(fd.get('startNear'), 10),
+        changeEnds: fd.get('changeEnds') === 'on',
         title: String(fd.get('title') || '').trim(),
         startScore: ss ? [parseInt(ss[1], 10), parseInt(ss[2], 10)] : [0, 0],
         teams: [0, 1].map((side) => ({ players: [0, 1, 2].slice(0, count).map((i) => String(fd.get(`p${side}_${i}`) || '').trim()) })),
@@ -274,6 +287,8 @@
       inputs.preset.value = c.winBy === 1 && c.pointsToWin === 21 ? 'nodeuce' : String(c.pointsToWin) in Scoring.PRESETS ? String(c.pointsToWin) : '21';
       inputs.bestOf.value = String(c.bestOf);
       inputs.firstServer.value = String(c.firstServer);
+      inputs.startNear.value = String(c.startNear || 0);
+      inputs.changeEnds.checked = c.changeEnds !== false;
       inputs.title.value = c.title || '';
       inputs.startScore.value = c.startScore && (c.startScore[0] || c.startScore[1]) ? c.startScore.join('-') : '';
       inputs.theme.value = st.project.look.theme;
@@ -287,7 +302,7 @@
       }
       inputs.category.querySelector('option[value="X"]').hidden = c.format === 'singles';
     };
-    return { el: f, write, firstServer: inputs.firstServer };
+    return { el: f, write, firstServer: inputs.firstServer, startNear: inputs.startNear };
   }
 
   function buildMenu() {
@@ -315,9 +330,10 @@
 
   function refreshLabels() {
     for (const side of [0, 1]) {
-      ui.names[side].textContent = teamLabel(side);
       ui.setup.firstServer.options[side].textContent = teamLabel(side);
+      ui.setup.startNear.options[side].textContent = teamLabel(side);
     }
+    st.nearShown = null;
   }
 
   let flashTimer = null;
@@ -381,6 +397,7 @@
     if (!v || !st.project) return;
     if (adShowing()) return flash('Wait for the ad to finish.');
     const t = v.currentTime;
+    const nearBefore = Scoring.nearSideAt(st.timeline, t);
     const before = Scoring.stateAt(st.timeline, t);
     if (before.matchWinner !== null && before.rallies === st.timeline.steps.length) {
       return flash('The match is already over. Undo or delete points to change it.');
@@ -391,7 +408,29 @@
     let msg = `${teamLabel(w)}  ${s.score[0]}–${s.score[1]}`;
     if (s.status === 'GAME' || s.status === 'MATCH') msg = `${s.status} ${msg}`;
     else if (s.status) msg += ` · ${s.status}`;
+    const nearAfter = Scoring.nearSideAt(st.timeline, t);
+    if (nearAfter !== nearBefore && s.status !== 'MATCH') msg += ` · Change ends: ${teamLabel(nearAfter)} now near`;
     flash(msg);
+  }
+
+  function addPointByCourt(court) {
+    const v = videoEl();
+    if (!v || !st.timeline) return;
+    const near = Scoring.nearSideAt(st.timeline, v.currentTime);
+    addPoint(court === 'near' ? near : 1 - near);
+  }
+
+  /** Keep the ↑/↓ buttons on whoever is currently far/near. */
+  function updateCourtButtons(t) {
+    const near = Scoring.nearSideAt(st.timeline, t);
+    if (near === st.nearShown) return;
+    st.nearShown = near;
+    ui.courtNames.near.textContent = teamLabel(near);
+    ui.courtNames.far.textContent = teamLabel(1 - near);
+    ui.court.near.classList.toggle('bsb-side0', near === 0);
+    ui.court.near.classList.toggle('bsb-side1', near === 1);
+    ui.court.far.classList.toggle('bsb-side0', near === 1);
+    ui.court.far.classList.toggle('bsb-side1', near === 0);
   }
 
   function undo() {
@@ -488,7 +527,9 @@
       if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
       const k = e.key.toLowerCase();
       let handled = true;
-      if (k === KEYS.side0) addPoint(0);
+      if (e.key === 'ArrowUp') addPointByCourt('far');
+      else if (e.key === 'ArrowDown') addPointByCourt('near');
+      else if (k === KEYS.side0) addPoint(0);
       else if (k === KEYS.side1) addPoint(1);
       else if (k === KEYS.undo) undo();
       else handled = false;
@@ -591,6 +632,7 @@
     const ad = adShowing();
     const t = v ? v.currentTime : 0;
     const s = Scoring.stateAt(st.timeline, t);
+    if (ui.court) updateCourtButtons(t);
     const resized = sizeOverlay();
     const key = JSON.stringify(s) + JSON.stringify(st.project.look) + ad + (ui.board.clientWidth || 0);
     if (key === st.lastKey && !resized) return;

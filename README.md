@@ -15,7 +15,9 @@ Works in Chrome, Edge, Brave and other Chromium browsers on a computer.
 
 1. Open a match on YouTube and click the toolbar icon. The panel appears above the recommended videos (below the video in theatre mode).
 2. **Setup (⚙):** singles/doubles/3 vs 3, category, names, 21/15/11 points, best of 1/3/5, who serves first, title, colours, and the score at the start of the video if you joined mid-match.
-3. **Scoring mode:** press **Q** when side 1 wins a rally, **P** for side 2 and **U** to undo, or click the buttons. Press when the rally ends; the score changes at that moment of the video. These keys don't interfere with YouTube's own shortcuts (J/K/L, arrows and space still work), and typing in YouTube's search box is ignored.
+3. **Scoring mode:** press **↑** when the far player (facing the camera) wins a rally and **↓** when the near player (back to the camera) wins it, or click the buttons. **U** undoes; **Q** / **P** score side 1 / side 2 by name. Press when the rally ends; the score changes at that moment of the video.
+   - Setup asks who is near the camera when the video starts. The buttons follow the players when they change ends (after each game, and at 11 in the deciding game).
+   - In scoring mode ↑/↓ score points instead of changing YouTube's volume. YouTube's other shortcuts (J/K/L, ←/→, space) still work, and typing in YouTube's search box is ignored.
 4. Click a rally in the list to jump to it; ✕ deletes a wrong point.
 5. Turn off scoring mode to just watch with the scoreboard. **Show on the video** puts it in the top-left corner of the player.
 
