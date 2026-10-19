@@ -10,17 +10,19 @@ Add a **BWF-style live scoreboard** (top-left corner) to your badminton match re
 
 ## What the scoreboard shows
 
+The default style copies the BWF World Tour broadcast graphic: light grey bevelled panel, country flags, dark names, finished games in dark digits and the current game in white digits on the grey box at the right.
+
 ```
-┌───────────────────────────────────────────┐
-│ HYDERABAD OPEN · FINAL · MEN'S SINGLES · GAME 3
-├───┬────────────────────┬────┬────┬────┐
-│ 🏸│ MOHANTY            │ 21 │ 19 │ 20 │  [MATCH POINT]
-│   │ REDDY              │ 18 │ 21 │ 17 │
-└───┴────────────────────┴────┴────┴────┘
+ ╱‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾╲┌────┐
+│ [🇮🇳╱ MOHANTY               │ 21 ││ 18 │  [GAME POINT]
+│ [🇯🇵╱ REDDY              🏸 │ 23 ││ 14 │
+ ╲________________________________╱└────┘
 ```
 
+- Pick a country for each side to show its flag (optional). Flags are bundled with the app, so they work offline and look the same everywhere.
 - The shuttle icon marks the side serving (in rally scoring, the side that won the last rally).
-- Columns show finished games; the white box is the current game.
+- Columns show finished games; the grey box on the right is the current game.
+- The older block styles (BWF blue, Dark, Red) are still available under *Colours*.
 - GAME POINT and MATCH POINT tags appear automatically. When a game ends, its final score stays up for 20 s (adjustable), then the board resets to 0–0.
 - Three colour themes, adjustable size, top-left or top-right.
 
@@ -37,7 +39,7 @@ Add a **BWF-style live scoreboard** (top-left corner) to your badminton match re
    - Click any rally in the list to jump to it. ✕ deletes a wrong point. Your work **auto-saves** in the browser, so you can close the tab and continue later. You can also save a project file.
 4. **Export**:
    - **Create video** in the browser. Uses hardware video encoding where available, keeps the original resolution and frame rate, copies the audio unchanged and writes straight to disk. A 15-min 1080p video usually takes 5–15 minutes.
-   - **ffmpeg kit**: a small ZIP with the scoreboard graphics and a double-click script (`.bat` for Windows, `.sh` for Mac/Linux) that burns them in with [ffmpeg](https://ffmpeg.org). This is the fastest option and works in any browser and with any video format.
+   - **ffmpeg kit**: a small ZIP with the scoreboard graphics and a double-click script (`.bat` for Windows, `.sh` for Mac/Linux) that burns them in with [ffmpeg](https://ffmpeg.org). It works in any browser and with any video format. The script uses your computer's graphics chip when ffmpeg can (Apple VideoToolbox, NVIDIA NVENC, Intel Quick Sync, AMD AMF), which is usually several times faster. Otherwise it uses x264's `veryfast` setting, 2–3× faster than the default.
    - Copy the generated **YouTube description** (result + chapters).
 
 ## Scoring from a YouTube link
@@ -82,4 +84,5 @@ npm start       # serve locally
 - `js/ffmpegkit.js`, `js/zip.js`: ffmpeg kit export
 - `js/youtube.js`: YouTube link parsing and IFrame-player wrapper (same interface as the local video)
 - `js/app.js`, `index.html`, `css/style.css`: the UI
+- `js/flags.js`, `flags/`: country list and flag SVGs from [flag-icons](https://github.com/lipis/flag-icons) (MIT)
 - `vendor/`: [mp4box.js](https://github.com/gpac/mp4box.js) 0.5.2 (BSD-3) and [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) 5.2.2 (MIT)

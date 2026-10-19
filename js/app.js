@@ -1,4 +1,4 @@
-/* global Scoring, Overlay, Exporter, FfmpegKit, YouTube */
+/* global Scoring, Overlay, Exporter, FfmpegKit, YouTube, Flags */
 (function () {
   'use strict';
 
@@ -125,6 +125,7 @@
       gameEndHold: fd.get('gameEndHold'),
       preset: fd.get('preset'),
       startNear: fd.get('startNear'),
+      countries: [fd.get('country0') || '', fd.get('country1') || ''],
       changeEnds: fd.get('changeEnds') === 'on',
     };
     const look = {
@@ -149,6 +150,8 @@
     setRadio('firstServer', String(c.firstServer || 0));
     setRadio('preset', c.preset || 'custom');
     setRadio('startNear', String(c.startNear || 0));
+    form.elements.country0.value = (c.countries && c.countries[0]) || '';
+    form.elements.country1.value = (c.countries && c.countries[1]) || '';
     form.elements.changeEnds.checked = c.changeEnds !== false;
     form.elements.title.value = c.title || '';
     form.elements.pointsToWin.value = c.pointsToWin || 21;
@@ -166,7 +169,7 @@
     const ss = c.startScore || [0, 0];
     form.elements.startScore.value = ss[0] || ss[1] ? ss.join('-') : '';
     if (look) {
-      form.elements.theme.value = look.theme || 'bwf';
+      form.elements.theme.value = look.theme || 'tour';
       form.elements.scale.value = look.scale || 1;
       form.elements.position.value = look.position || 'tl';
       form.elements.showHeader.checked = look.showHeader !== false;
@@ -200,8 +203,25 @@
     $('#near-label-0').textContent = teamLabel(0);
     $('#near-label-1').textContent = teamLabel(1);
     drawSetupPreview();
+    loadFlags();
     if (app.events.length) rebuild();
     persist();
+  }
+
+  // Flag images for both sides, ready for canvas drawing.
+  app.flags = [null, null];
+  let flagsKey = '';
+  function loadFlags() {
+    const key = app.config.countries.join(',');
+    if (key === flagsKey) return app.flagsReady;
+    flagsKey = key;
+    app.flagsReady = Flags.forConfig(app.config).then((imgs) => {
+      if (key !== flagsKey) return;
+      app.flags = imgs;
+      lastDrawKey = '';
+      drawSetupPreview();
+    });
+    return app.flagsReady;
   }
 
   function drawSetupPreview() {
@@ -220,7 +240,7 @@
       statusSide: 0,
       matchWinner: null,
     };
-    Overlay.draw(ctx, cfg, sample, Object.assign({}, app.look, { width: canvas.width, height: 720 }));
+    Overlay.draw(ctx, cfg, sample, Object.assign({}, app.look, { width: canvas.width, height: 720, flags: app.flags }));
   }
 
   form.addEventListener('input', onFormChange);
@@ -467,7 +487,7 @@
   }
 
   function overlayOpts(width, height) {
-    return Object.assign({}, app.look, { width, height });
+    return Object.assign({}, app.look, { width, height, flags: app.flags });
   }
 
   function renderLoop() {
@@ -475,7 +495,7 @@
     if ($('#screen-score').hidden || !app.timeline) return;
     const t = player().getTime();
     const st = Scoring.stateAt(app.timeline, t);
-    const key = JSON.stringify(st) + JSON.stringify(app.look);
+    const key = JSON.stringify(st) + JSON.stringify(app.look) + flagsKey + (app.flags[0] ? 1 : 0) + (app.flags[1] ? 1 : 0);
     if (key !== lastDrawKey) {
       lastDrawKey = key;
       octx.clearRect(0, 0, overlay.width, overlay.height);
@@ -779,6 +799,7 @@
     }
 
     await loadFonts();
+    await loadFlags();
     const controller = new AbortController();
     app.exporting = controller;
     let wakeLock = null;
@@ -797,7 +818,7 @@
     const quality = $('#quality').value;
     const bitrate = quality === 'high' ? 12e6 : quality === 'small' ? 6e6 : undefined;
     const timeline = app.timeline;
-    const look = app.look;
+    const look = Object.assign({}, app.look, { flags: app.flags });
     // Cache the last drawn state: consecutive frames almost always share it.
     let cacheKey = '';
     let cacheCanvas = null;
@@ -865,6 +886,7 @@
     btn.disabled = true;
     try {
       await loadFonts();
+      await loadFlags();
       // From YouTube we don't know the original file's size, only its shape; the
       // kit's script scales the graphics to the real video anyway.
       const portrait = app.source === 'youtube' && $('#kit-shape').value === 'portrait';
@@ -873,7 +895,7 @@
         Scoring,
         Overlay,
         timeline: app.timeline,
-        overlayOpts: app.look,
+        overlayOpts: Object.assign({}, app.look, { flags: app.flags }),
         width: size[0],
         height: size[1],
         duration: app.video.duration,
@@ -901,11 +923,16 @@
 
   // ---------------------------------------------------------------- init
 
+  for (const name of ['country0', 'country1']) {
+    const sel = form.elements[name];
+    for (const [code, label] of Flags.COUNTRIES) sel.append(new Option(label, code));
+  }
+
   writeForm(Object.assign({}, Scoring.DEFAULT_CONFIG, { teams: [{ players: [] }, { players: [] }], preset: '21' }), {
-    theme: 'bwf',
+    theme: 'tour',
     scale: 1,
     position: 'tl',
-    showHeader: true,
+    showHeader: false,
   });
   show('setup');
   loadFonts().then(drawSetupPreview);

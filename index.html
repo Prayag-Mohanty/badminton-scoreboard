@@ -73,6 +73,7 @@
           <input name="p0_0" placeholder="Player name" maxlength="40" />
           <input name="p0_1" placeholder="Partner" maxlength="40" data-min="doubles" />
           <input name="p0_2" placeholder="Third player" maxlength="40" data-min="3v3" />
+          <select name="country0" class="country" aria-label="Side 1 flag"><option value="">No flag</option></select>
         </fieldset>
         <div class="vs">vs</div>
         <fieldset class="team" data-side="1">
@@ -80,6 +81,7 @@
           <input name="p1_0" placeholder="Player name" maxlength="40" />
           <input name="p1_1" placeholder="Partner" maxlength="40" data-min="doubles" />
           <input name="p1_2" placeholder="Third player" maxlength="40" data-min="3v3" />
+          <select name="country1" class="country" aria-label="Side 2 flag"><option value="">No flag</option></select>
         </fieldset>
       </div>
       <p class="muted small">Tip: short names (surnames) look best, like on BWF TV.</p>
@@ -159,6 +161,7 @@
         <label class="field">
           <span class="label">Colours</span>
           <select name="theme">
+            <option value="tour">BWF World Tour (grey)</option>
             <option value="bwf">BWF blue</option>
             <option value="dark">Dark</option>
             <option value="red">Red</option>
@@ -321,6 +324,7 @@
   <script src="vendor/mp4-muxer.js"></script>
   <script src="js/scoring.js"></script>
   <script src="js/overlay.js"></script>
+  <script src="js/flags.js"></script>
   <script src="js/zip.js"></script>
   <script src="js/exporter.js"></script>
   <script src="js/ffmpegkit.js"></script>
