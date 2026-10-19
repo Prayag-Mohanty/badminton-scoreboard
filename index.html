@@ -7,30 +7,50 @@
   <meta name="description" content="Add a BWF-style live scoreboard to your badminton match videos. Runs entirely in your browser — your video is never uploaded." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <meta name="theme-color" content="#eef3ff" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+  <div class="backdrop" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
+
   <header class="topbar">
-    <div class="brand"><span class="logo" aria-hidden="true">🏸</span> Badminton Scoreboard</div>
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="22" height="22"><path d="M9 23 4.5 9.5 18 5l4.6 13.4z" fill="#fff" opacity=".95"/><path d="M8.6 9.2 13 21M12.4 7.6 17.4 19.6M16 6.5l5 12" stroke="#2f6bff" stroke-width="1.2" opacity=".45"/><circle cx="24.5" cy="24.5" r="4.5" fill="#ffd34d"/></svg>
+      </span>
+      <span class="brand-text">Badminton Scoreboard<small>Broadcast graphics for your match videos</small></span>
+    </div>
     <nav class="steps" aria-label="Progress">
-      <span class="step" data-step="setup">1. Setup</span>
-      <span class="step" data-step="score">2. Score the match</span>
-      <span class="step" data-step="export">3. Export</span>
+      <span class="step" data-step="setup"><b>1</b>Setup</span>
+      <span class="step" data-step="score"><b>2</b>Score the match</span>
+      <span class="step" data-step="export"><b>3</b>Export</span>
     </nav>
   </header>
 
   <!-- ============ STEP 1: SETUP ============ -->
   <main id="screen-setup" class="screen">
+    <section class="hero">
+      <h1>Give your match videos a <span class="hl">world tour</span> scoreboard.</h1>
+      <p>Pick your recording, tap ↑ / ↓ as each rally ends, and export the same video with a BWF-style scoreboard in the corner.</p>
+      <ul class="chips">
+        <li>🔒 Your video never leaves this device</li>
+        <li>📺 BWF World Tour look</li>
+        <li>⏱️ YouTube chapters included</li>
+      </ul>
+    </section>
+
     <section class="card">
-      <h2>Your match video</h2>
+      <h2><span class="num">1</span>Your match video</h2>
       <label id="dropzone" class="dropzone">
         <input id="file-input" type="file" accept="video/*,.mp4,.mov,.m4v" hidden />
         <div class="dz-empty">
+          <span class="dz-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
           <strong>Choose or drop your match video</strong>
           <span>MP4 / MOV from your phone. Large files (1–2 GB) are fine: the video stays on your device and is never uploaded.</span>
         </div>
         <div class="dz-file" hidden>
+          <span class="dz-icon ok" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
           <strong id="file-name"></strong>
           <span id="file-meta"></span>
         </div>
@@ -46,7 +66,7 @@
     </section>
 
     <form id="setup-form" class="card" autocomplete="off">
-      <h2>About the match</h2>
+      <h2><span class="num">2</span>About the match</h2>
 
       <div class="field">
         <span class="label">Match type</span>
@@ -156,7 +176,7 @@
         </div>
       </details>
 
-      <h2 class="mt">Scoreboard look</h2>
+      <h2 class="mt"><span class="num">3</span>Scoreboard look</h2>
       <div class="grid3">
         <label class="field">
           <span class="label">Colours</span>
@@ -181,6 +201,7 @@
       </div>
       <div class="grid2">
         <label class="check"><input type="checkbox" name="showHeader" checked /> Show title strip (event · category · game)</label>
+        <label class="check"><input type="checkbox" name="showStatus" /> Show GAME POINT / MATCH POINT tag</label>
         <label class="field inline">
           <span class="label">Keep game score on screen after a game ends</span>
           <span><input type="number" name="gameEndHold" min="0" max="600" value="20" class="narrow" /> seconds</span>
@@ -188,7 +209,7 @@
       </div>
 
       <div class="preview-still">
-        <canvas id="setup-preview" width="1280" height="200"></canvas>
+        <canvas id="setup-preview" width="1280" height="230"></canvas>
       </div>
 
       <div class="actions">
@@ -267,12 +288,12 @@
   <!-- ============ STEP 3: EXPORT ============ -->
   <main id="screen-export" class="screen" hidden>
     <section class="card">
-      <h2>Export your video</h2>
+      <h2><span class="num">3</span>Export your video</h2>
       <div id="export-summary" class="summary big"></div>
 
       <div class="export-options">
         <div class="option">
-          <h3>Make the video here</h3>
+          <h3><span class="opt-icon" aria-hidden="true">🎬</span>Make the video here</h3>
           <p class="notice" id="yt-orig-note" hidden>You scored this match on YouTube. Choose the <b>original video file</b> (the one you uploaded) and the scoreboard is added to it. Timings match as long as you didn't trim the start of the video in YouTube Studio.</p>
           <input id="orig-input" type="file" accept="video/*,.mp4,.mov,.m4v" hidden />
           <p class="muted" id="browser-blurb">Creates <b id="out-name">match-scoreboard.mp4</b> in this browser. Best in <b>Chrome or Edge on a laptop</b>. A 15-minute 1080p video usually takes 5–15 minutes. Keep this tab open while it runs.</p>
@@ -294,7 +315,7 @@
         </div>
 
         <div class="option">
-          <h3>ffmpeg kit (fastest, any computer)</h3>
+          <h3><span class="opt-icon green" aria-hidden="true">⚡</span>ffmpeg kit (fastest, any computer)</h3>
           <p class="muted">Downloads a small ZIP with the scoreboard graphics and a script that adds them to your video using <a href="https://ffmpeg.org" target="_blank" rel="noopener">ffmpeg</a> (free). Fastest option and the sound is kept exactly as recorded. Install ffmpeg once, then double-click the script.</p>
           <label class="field" id="kit-shape-field" hidden>
             <span class="label">Original video is</span>
@@ -308,7 +329,7 @@
         </div>
       </div>
 
-      <h3 class="mt">YouTube description</h3>
+      <h3 class="mt"><span class="opt-icon red" aria-hidden="true">▶</span>YouTube description</h3>
       <p class="muted small">Includes the result and chapter timestamps for each game. YouTube turns these into chapters automatically.</p>
       <textarea id="yt-text" rows="9" readonly></textarea>
       <div class="actions">

@@ -93,7 +93,11 @@
 
   function show(screen) {
     for (const s of ['setup', 'score', 'export']) $(`#screen-${s}`).hidden = s !== screen;
-    $$('.step').forEach((el) => el.classList.toggle('active', el.dataset.step === screen));
+    const order = ['setup', 'score', 'export'];
+    $$('.step').forEach((el) => {
+      el.classList.toggle('active', el.dataset.step === screen);
+      el.classList.toggle('done', order.indexOf(el.dataset.step) < order.indexOf(screen));
+    });
     if (screen !== 'score' && app.source && !player().isPaused()) player().pause();
     window.scrollTo(0, 0);
   }
@@ -133,6 +137,7 @@
       scale: parseFloat(fd.get('scale')) || 1,
       position: fd.get('position'),
       showHeader: fd.get('showHeader') === 'on',
+      showStatus: fd.get('showStatus') === 'on',
     };
     return { config, look };
   }
@@ -173,6 +178,7 @@
       form.elements.scale.value = look.scale || 1;
       form.elements.position.value = look.position || 'tl';
       form.elements.showHeader.checked = look.showHeader !== false;
+      form.elements.showStatus.checked = !!look.showStatus;
     }
     onFormChange();
   }
@@ -240,7 +246,8 @@
       statusSide: 0,
       matchWinner: null,
     };
-    Overlay.draw(ctx, cfg, sample, Object.assign({}, app.look, { width: canvas.width, height: 720, flags: app.flags }));
+    // Draw as if on a 1080p frame so the preview shows the board at a readable size.
+    Overlay.draw(ctx, cfg, sample, Object.assign({}, app.look, { width: canvas.width, height: 1080, flags: app.flags }));
   }
 
   form.addEventListener('input', onFormChange);
