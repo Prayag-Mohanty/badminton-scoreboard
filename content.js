@@ -1,4 +1,4 @@
-/* global Scoring, Overlay, chrome */
+/* global Scoring, Overlay, Flags, chrome */
 /*
  * Badminton Scoreboard for YouTube — content script.
  *
@@ -35,8 +35,9 @@
     gameEndHold: 20,
     startNear: 0,
     changeEnds: true,
+    countries: ['', ''],
   };
-  const DEFAULT_LOOK = { theme: 'bwf', scale: 1, position: 'tl', showHeader: true };
+  const DEFAULT_LOOK = { theme: 'tour', scale: 1, position: 'tl', showHeader: false };
 
   const st = {
     videoId: null,
@@ -116,7 +117,21 @@
 
   // ------------------------------------------------------------------ project state
 
+  st.flags = [null, null];
+  let flagsKey = '';
+  function loadFlags() {
+    const key = (st.project.config.countries || []).join(',');
+    if (key === flagsKey) return;
+    flagsKey = key;
+    Flags.forConfig(st.project.config).then((imgs) => {
+      if (key !== flagsKey) return;
+      st.flags = imgs;
+      st.lastKey = '';
+    });
+  }
+
   function rebuild() {
+    loadFlags();
     st.timeline = Scoring.buildTimeline(st.project.config, st.project.events);
     st.lastKey = '';
     renderRallies();
@@ -230,18 +245,21 @@
       startNear: select('startNear', [['0', 'Side 1'], ['1', 'Side 2']]),
       changeEnds: h('input', { type: 'checkbox', name: 'changeEnds' }),
       title: h('input', { name: 'title', maxlength: 60, placeholder: 'e.g. Hyderabad Open · Final' }),
-      theme: select('theme', [['bwf', 'BWF blue'], ['dark', 'Dark'], ['red', 'Red']]),
+      theme: select('theme', [['tour', 'BWF World Tour (grey)'], ['bwf', 'BWF blue'], ['dark', 'Dark'], ['red', 'Red']]),
       scale: h('input', { name: 'scale', type: 'range', min: 0.6, max: 1.6, step: 0.05 }),
       startScore: h('input', { name: 'startScore', placeholder: '0-0', size: 6 }),
     };
     const players = [0, 1].map((side) =>
       [0, 1, 2].map((i) => h('input', { name: `p${side}_${i}`, maxlength: 40, placeholder: i === 0 ? 'Player' : i === 1 ? 'Partner' : 'Third player' }))
     );
+    const countries = [0, 1].map((side) =>
+      select(`country${side}`, [['', 'No flag']].concat(Flags.COUNTRIES))
+    );
     f.append(
       h('div', { class: 'bsb-grid2' }, [field('Match type', inputs.format), field('Category', inputs.category)]),
       h('div', { class: 'bsb-grid2' }, [
-        h('fieldset', { class: 'bsb-team' }, [h('legend', { text: 'Side 1' })].concat(players[0])),
-        h('fieldset', { class: 'bsb-team' }, [h('legend', { text: 'Side 2' })].concat(players[1])),
+        h('fieldset', { class: 'bsb-team' }, [h('legend', { text: 'Side 1' })].concat(players[0], [countries[0]])),
+        h('fieldset', { class: 'bsb-team' }, [h('legend', { text: 'Side 2' })].concat(players[1], [countries[1]])),
       ]),
       h('div', { class: 'bsb-grid2' }, [field('Points', inputs.preset), field('Games', inputs.bestOf)]),
       h('div', { class: 'bsb-grid2' }, [field('Serves first', inputs.firstServer), field('Near camera at start', inputs.startNear)]),
@@ -267,6 +285,7 @@
         firstServer: parseInt(fd.get('firstServer'), 10),
         startNear: parseInt(fd.get('startNear'), 10),
         changeEnds: fd.get('changeEnds') === 'on',
+        countries: [fd.get('country0') || '', fd.get('country1') || ''],
         title: String(fd.get('title') || '').trim(),
         startScore: ss ? [parseInt(ss[1], 10), parseInt(ss[2], 10)] : [0, 0],
         teams: [0, 1].map((side) => ({ players: [0, 1, 2].slice(0, count).map((i) => String(fd.get(`p${side}_${i}`) || '').trim()) })),
@@ -289,6 +308,7 @@
       inputs.firstServer.value = String(c.firstServer);
       inputs.startNear.value = String(c.startNear || 0);
       inputs.changeEnds.checked = c.changeEnds !== false;
+      countries.forEach((el, side) => (el.value = (c.countries && c.countries[side]) || ''));
       inputs.title.value = c.title || '';
       inputs.startScore.value = c.startScore && (c.startScore[0] || c.startScore[1]) ? c.startScore.join('-') : '';
       inputs.theme.value = st.project.look.theme;
@@ -607,12 +627,23 @@
     const c = ui.board;
     const dpr = window.devicePixelRatio || 1;
     const cssW = c.clientWidth || 380;
-    // Board width in overlay units: serve + names + game columns + current + status pill.
-    const nameU = cfg.format === 'singles' ? 300 : 400;
-    const units = 28 + 36 + nameU + Math.max(1, cfg.bestOf - 1) * 44 + 56 + 130;
+    const tour = !look.theme || look.theme === 'tour';
+    let units;
+    let unitsH;
+    if (tour) {
+      // Size from the real board at 1 unit = 1 px, plus room for the GAME POINT tag.
+      const m = Overlay.measure(c.getContext('2d'), cfg, s, Object.assign({}, look, { width: 1080, height: 1080, scale: 1, flags: st.flags }));
+      units = m.x + m.width + 140;
+      unitsH = m.y * 2 + m.height;
+    } else {
+      // Block styles: serve + names + game columns + current + status pill.
+      const nameU = cfg.format === 'singles' ? 300 : 400;
+      units = 28 + 36 + nameU + Math.max(1, cfg.bestOf - 1) * 44 + 56 + 130;
+      unitsH = 28 + 26 + 92 + 14;
+    }
     const u = (cssW * dpr) / units;
     const width = Math.round(cssW * dpr);
-    const height = Math.round((28 + 26 + 92 + 14) * u);
+    const height = Math.round(unitsH * u);
     if (c.width !== width || c.height !== height) {
       c.width = width;
       c.height = height;
@@ -622,7 +653,7 @@
     ctx.clearRect(0, 0, width, height);
     // Overlay sizes by min(width, height)/1080 × scale; pick the scale that gives `u`.
     const ref = Math.min(width, 1080);
-    Overlay.draw(ctx, cfg, s, Object.assign({}, look, { position: 'tl', width, height: 1080, scale: (u * 1080) / ref }));
+    Overlay.draw(ctx, cfg, s, Object.assign({}, look, { position: 'tl', width, height: 1080, scale: (u * 1080) / ref, flags: st.flags }));
   }
 
   function frame() {
@@ -644,7 +675,7 @@
     if (overlayCanvas && overlayCanvas.isConnected) {
       const ctx = overlayCanvas.getContext('2d');
       ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-      if (!ad) Overlay.draw(ctx, cfg, s, Object.assign({}, st.project.look, { width: overlayCanvas.width, height: overlayCanvas.height }));
+      if (!ad) Overlay.draw(ctx, cfg, s, Object.assign({}, st.project.look, { width: overlayCanvas.width, height: overlayCanvas.height, flags: st.flags }));
     }
     if (ui.rallies) {
       ui.rallies.querySelectorAll('.bsb-current').forEach((li) => li.classList.remove('bsb-current'));
@@ -673,6 +704,7 @@
     }
     const saved = await storageGet(STORE_PREFIX + id);
     st.project = normalizeProject(saved);
+    loadFlags();
     st.timeline = Scoring.buildTimeline(st.project.config, st.project.events);
     st.scoring = false;
     // Videos you've scored before open with their scoreboard; others stay untouched
@@ -693,6 +725,7 @@
   });
 
   async function init() {
+    Flags.setBase(chrome.runtime.getURL('flags/'));
     st.settings = Object.assign({ onVideo: true }, await storageGet(SETTINGS_KEY));
     loadFonts();
     window.addEventListener('yt-navigate-finish', onPage);

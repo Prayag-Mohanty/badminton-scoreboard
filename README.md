@@ -14,7 +14,7 @@ Works in Chrome, Edge, Brave and other Chromium browsers on a computer.
 ## Use it
 
 1. Open a match on YouTube and click the toolbar icon. The panel appears above the recommended videos (below the video in theatre mode).
-2. **Setup (⚙):** singles/doubles/3 vs 3, category, names, 21/15/11 points, best of 1/3/5, who serves first, title, colours, and the score at the start of the video if you joined mid-match.
+2. **Setup (⚙):** singles/doubles/3 vs 3, category, names and country flags, 21/15/11 points, best of 1/3/5, who serves first, who is near the camera, title, colours, and the score at the start of the video if you joined mid-match. The default look copies the BWF World Tour broadcast scoreboard.
 3. **Scoring mode:** press **↑** when the far player (facing the camera) wins a rally and **↓** when the near player (back to the camera) wins it, or click the buttons. **U** undoes; **Q** / **P** score side 1 / side 2 by name. Press when the rally ends; the score changes at that moment of the video.
    - Setup asks who is near the camera when the video starts. The buttons follow the players when they change ends (after each game, and at 11 in the deciding game).
    - In scoring mode ↑/↓ score points instead of changing YouTube's volume. YouTube's other shortcuts (J/K/L, ←/→, space) still work, and typing in YouTube's search box is ignored.
@@ -40,4 +40,5 @@ Everything is saved per video in your browser. When you open a video you've scor
 - `content.js`, `content.css`: the panel, keys, overlay and storage
 - `background.js`: toolbar button
 - `lib/scoring.js`, `lib/overlay.js`: scoring engine and scoreboard drawing, shared with the web app
+- `lib/flags.js`, `flags/`: country list and flag SVGs from flag-icons (MIT, see `flags/LICENSE`)
 - `fonts/`: Barlow Condensed (SIL Open Font License, see `fonts/OFL.txt`)

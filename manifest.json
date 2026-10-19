@@ -10,12 +10,12 @@
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*"],
-      "js": ["lib/scoring.js", "lib/overlay.js", "content.js"],
+      "js": ["lib/scoring.js", "lib/overlay.js", "lib/flags.js", "content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
-    { "resources": ["fonts/*.ttf"], "matches": ["https://www.youtube.com/*"] }
+    { "resources": ["fonts/*.ttf", "flags/*.svg"], "matches": ["https://www.youtube.com/*"] }
   ]
 }
