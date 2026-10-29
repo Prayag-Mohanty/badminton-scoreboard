@@ -2,6 +2,8 @@
 
 Add a **BWF-style live scoreboard** (top-left corner) to your badminton match recordings, so viewers always know the score.
 
+https://prayag-mohanty.github.io/badminton-scoreboard/
+
 - Choose your match video. Files over 1 GB are fine, because **the video never leaves your computer**. Everything runs in the browser.
 - …or **paste a YouTube link** and score the match while watching it on YouTube (good on a phone, or when the big file is on another computer).
 - Answer a few questions: singles / doubles / 3 vs 3, men's / women's / mixed, 21, 15 or 11 points, best of 1/3/5, deuce and cap, who serves first, who is near the camera at the start, player names, and an optional event title.
